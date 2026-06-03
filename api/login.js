@@ -15,25 +15,35 @@ const pool = mysql.createPool({
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method === 'OPTIONS') return res.status(200).end();
-  
-  const { pirate_name, whatsapp_number } = req.body;
+
+  let { whatsapp_number } = req.body;
+  if (!whatsapp_number) {
+    return res.status(400).json({ error: 'Please provide your WhatsApp number.' });
+  }
+
+  // Clean the number (remove +, spaces, etc.)
+  whatsapp_number = whatsapp_number.replace(/[+\s]/g, '').trim();
   const userId = `${whatsapp_number}@s.whatsapp.net`;
 
   try {
     const [rows] = await pool.execute(
-      'SELECT * FROM players WHERE pirate_name = ? AND user_id = ?',
-      [pirate_name, userId]
+      'SELECT * FROM players WHERE user_id = ?',
+      [userId]
     );
+
     if (rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'No account found with this number. Make sure you registered with the bot first.' });
     }
+
+    const user = rows[0];
     const token = jwt.sign(
-      { userId: rows[0].user_id, pirateName: rows[0].pirate_name },
+      { userId: user.user_id, pirateName: user.pirate_name },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
-    return res.json({ token, user: rows[0] });
+
+    return res.json({ token, user });
   } catch (err) {
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: 'Server error: ' + err.message });
   }
 };
