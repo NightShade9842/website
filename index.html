@@ -1,43 +1,120 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>SABAODY Pirates - Login</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SABAODY Pirates – Login</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* extra mobile‑friendly tweaks */
+    body { margin: 0; padding: 0; }
+    .login-box {
+      max-width: 400px;
+      margin: 10vh auto 0;
+      padding: 2rem;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 1.5rem;
+    }
+    .login-box h1 {
+      font-family: 'Pirata One', cursive;
+      text-align: center;
+      color: #ffd700;
+      margin-bottom: 1.5rem;
+      font-size: 2rem;
+    }
+    .login-box input {
+      width: 100%;
+      padding: 0.8rem;
+      margin-bottom: 1rem;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 0.5rem;
+      color: white;
+      font-size: 1rem;
+    }
+    .login-box input:focus {
+      outline: none;
+      border-color: #ffd700;
+    }
+    .login-box button {
+      width: 100%;
+      padding: 0.8rem;
+      background: #ffd700;
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: bold;
+      font-size: 1rem;
+      color: #000;
+      cursor: pointer;
+    }
+    .login-box button:active {
+      background: #e6c200;
+    }
+    #output {
+      margin-top: 1rem;
+      background: #0a0a0a;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.8rem;
+      color: #0f0;
+      word-break: break-word;
+      max-height: 200px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .instructions {
+      color: #ccc;
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+  </style>
 </head>
 <body class="bg-gradient">
-  <div class="container" style="max-width:400px; margin-top:10vh;">
-    <h1 class="text-gold" style="font-family:'Pirata One'; text-align:center;">⚓ SABAODY PIRATES</h1>
-    <div class="glass" style="padding:2rem;">
-      <p class="text-sm mb-4">Enter your WhatsApp number to log in.</p>
-      <input type="text" id="whatsapp" placeholder="e.g. 233560806367" class="btn" style="width:100%; background:#fff1; color:#fff; margin-bottom:1rem;">
-      <button onclick="login()" class="btn" style="width:100%;">Set Sail ⚓</button>
-      <div id="output" style="margin-top:1rem; background:#111; padding:1rem; border-radius:5px; font-size:0.8rem; word-break:break-all; color:#0f0; max-height:200px; overflow:auto;"></div>
-    </div>
+  <div class="login-box">
+    <h1>⚓ SABAODY PIRATES</h1>
+    <p class="instructions">Enter your WhatsApp number (with country code) to log in.</p>
+    <input type="text" id="whatsapp" placeholder="e.g. 233560806367" autocomplete="tel">
+    <button onclick="login()">Set Sail ⚓</button>
+    <div id="output"></div>
   </div>
+
   <script>
     async function login() {
-      const whatsapp = document.getElementById('whatsapp').value.replace(/[+\s]/g, '');
+      let phone = document.getElementById('whatsapp').value.replace(/[+\s]/g, '');
       const output = document.getElementById('output');
-      output.textContent = 'Checking...';
+      output.textContent = '🔄 Checking your account...';
+
+      if (!phone) {
+        output.textContent = '❌ Please enter your WhatsApp number.';
+        return;
+      }
 
       try {
         const res = await fetch('/api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ whatsapp_number: whatsapp })
+          body: JSON.stringify({ whatsapp_number: phone })
         });
 
         const data = await res.json();
         output.textContent = JSON.stringify(data, null, 2);
 
-        if (data.token) {
+        if (data.token && data.user) {
+          // Save credentials and redirect
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user));
-          output.textContent += '\n\n✅ Login successful! Redirecting...';
-          setTimeout(() => { window.location.href = '/dashboard.html'; }, 1000);
+          output.textContent += '\n\n✅ Login successful! Redirecting…';
+          setTimeout(() => {
+            window.location.href = '/dashboard.html';
+          }, 800);
+        } else {
+          output.textContent = '❌ ' + (data.error || 'Unknown error');
         }
       } catch (err) {
-        output.textContent = 'Network error: ' + err.message;
+        output.textContent = '⚠️ Network or server error: ' + err.message;
       }
     }
   </script>
