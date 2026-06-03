@@ -21,18 +21,25 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Please provide your WhatsApp number.' });
   }
 
-  // Clean the number (remove +, spaces, etc.)
-  whatsapp_number = whatsapp_number.replace(/[+\s]/g, '').trim();
-  const userId = `${whatsapp_number}@s.whatsapp.net`;
+  // Clean input: remove spaces and plus signs, but also keep a version with plus
+  const cleanNumber = whatsapp_number.replace(/[+\s]/g, '').trim();
+  const candidates = [
+    `${cleanNumber}@s.whatsapp.net`,
+    `+${cleanNumber}@s.whatsapp.net`
+  ];
 
   try {
-    const [rows] = await pool.execute(
-      'SELECT * FROM players WHERE user_id = ?',
-      [userId]
-    );
+    let rows = [];
+    for (const userId of candidates) {
+      const [resRows] = await pool.execute('SELECT * FROM players WHERE user_id = ?', [userId]);
+      if (resRows.length) {
+        rows = resRows;
+        break;
+      }
+    }
 
     if (rows.length === 0) {
-      return res.status(401).json({ error: 'No account found with this number. Make sure you registered with the bot first.' });
+      return res.status(401).json({ error: 'No account found. Try another number or register with the bot first.' });
     }
 
     const user = rows[0];
