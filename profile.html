@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head><title>Profile</title><link rel="stylesheet" href="css/style.css"></head>
+<body class="bg-gradient">
+  <div id="navbar"></div>
+  <div class="container" style="max-width:600px;">
+    <h2 class="text-gold" style="font-family:'Pirata One';">Edit Profile</h2>
+    <div class="glass p-4">
+      <input id="pirateName" class="btn" style="width:100%; background:#fff1; color:#fff; margin-bottom:1rem;" placeholder="Pirate Name">
+      <input id="profilePic" class="btn" style="width:100%; background:#fff1; color:#fff; margin-bottom:1rem;" placeholder="Profile Picture URL">
+      <button onclick="updateProfile()" class="btn">Save</button>
+    </div>
+  </div>
+  <script src="js/main.js"></script>
+  <script>
+    requireAuth();
+    const user = getUser();
+    document.getElementById('pirateName').value = user.pirate_name;
+    document.getElementById('profilePic').value = user.profile_pic || '';
+
+    async function updateProfile() {
+      const res = await apiFetch('/player', {
+        method: 'PUT',
+        body: JSON.stringify({
+          pirate_name: document.getElementById('pirateName').value,
+          profile_pic: document.getElementById('profilePic').value
+        })
+      });
+      if (res.success) alert('Profile updated!');
+    }
+  </script>
+</body>
+</html>
