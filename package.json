@@ -1,7 +1,7 @@
 {
   "name": "sabaody-web-static",
   "version": "1.0.0",
-  "private": true,
+  "private": false,
   "dependencies": {
     "mysql2": "^3.11.3",
     "jsonwebtoken": "^9.0.2"
