@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>SABAODY Pirates - Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-gradient">
+  <div class="container" style="max-width:400px; margin-top:10vh;">
+    <h1 class="text-gold" style="font-family:'Pirata One'; text-align:center;">⚓ SABAODY PIRATES</h1>
+    <div class="glass" style="padding:2rem;">
+      <input type="text" id="pirateName" placeholder="Pirate Name" class="btn" style="width:100%; background:#fff1; color:#fff; margin-bottom:1rem;">
+      <input type="text" id="whatsapp" placeholder="WhatsApp Number (with country code)" class="btn" style="width:100%; background:#fff1; color:#fff; margin-bottom:1rem;">
+      <button onclick="login()" class="btn" style="width:100%;">Set Sail ⚓</button>
+      <p id="error" class="text-red text-sm mt-2"></p>
+    </div>
+  </div>
+  <script>
+    async function login() {
+      const pirate_name = document.getElementById('pirateName').value;
+      const whatsapp_number = document.getElementById('whatsapp').value;
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pirate_name, whatsapp_number })
+      });
+      const data = await res.json();
+      if (data.error) {
+        document.getElementById('error').textContent = data.error;
+      } else {
+        saveAuth(data.token, data.user);
+        window.location.href = '/dashboard.html';
+      }
+    }
+  </script>
+</body>
+</html>
