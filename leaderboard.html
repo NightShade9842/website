@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard - SABAODY</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pirata+One&display=swap" rel="stylesheet">
+    <style>
+        .pirate { font-family: 'Pirata One', cursive; }
+        body { background: #0b0e1e; color: #e2e8f0; }
+        .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .tab-btn { padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; }
+        .tab-active { background: #f59e0b; color: black; font-weight: bold; }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <nav class="glass rounded-2xl p-4 mb-8 flex justify-between items-center">
+        <h1 class="text-3xl pirate gold-text">⚓ SABAODY</h1>
+        <div class="space-x-4">
+            <a href="profile.html" class="text-gray-300 hover:text-yellow-400">Profile</a>
+            <a href="cards.html" class="text-gray-300 hover:text-yellow-400">Cards</a>
+            <a href="store.html" class="text-gray-300 hover:text-yellow-400">Store</a>
+            <a href="leaderboard.html" class="text-yellow-400 font-semibold">Leaderboard</a>
+            <button onclick="logout()" class="bg-red-500 px-4 py-2 rounded-xl text-white">Logout</button>
+        </div>
+    </nav>
+
+    <div class="glass rounded-2xl p-6">
+        <div class="flex space-x-4 mb-6 overflow-x-auto">
+            <button onclick="switchLB('level')" class="tab-btn tab-active" id="lb-level">📊 Level</button>
+            <button onclick="switchLB('richest')" class="tab-btn" id="lb-richest">💰 Richest</button>
+            <button onclick="switchLB('legendary')" class="tab-btn" id="lb-legendary">🌟 Legendary</button>
+            <button onclick="switchLB('guild')" class="tab-btn" id="lb-guild">⚔️ Guild</button>
+        </div>
+        <div id="lb-content"></div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let currentLB = 'level';
+        function switchLB(type) {
+            currentLB = type;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+            document.getElementById('lb-' + type).classList.add('tab-active');
+            loadLeaderboard();
+        }
+        async function loadLeaderboard() {
+            const container = document.getElementById('lb-content');
+            container.innerHTML = 'Loading...';
+            const data = await apiFetch('/leaderboard/' + currentLB);
+            if (Array.isArray(data)) {
+                const rows = data.map((e,i) => {
+                    let info = '';
+                    if (currentLB === 'level') info = `Level ${e.level} (XP: ${e.xp})`;
+                    else if (currentLB === 'richest') info = `💰 ${e.total ? e.total.toLocaleString() : (e.beli+e.bank).toLocaleString()}`;
+                    else if (currentLB === 'legendary') info = `${e.count} Legendary Cards`;
+                    else if (currentLB === 'guild') info = `Treasury: ${e.treasury?.toLocaleString()}, Members: ${e.members}`;
+                    return `<tr class="border-b border-gray-800">
+                        <td class="py-2">${i+1}</td>
+                        <td class="py-2">${e.pirate_name || e.name || 'Unknown'}</td>
+                        <td class="py-2">${info}</td>
+                    </tr>`;
+                }).join('');
+                container.innerHTML = `<table class="w-full text-left"><thead><tr class="text-gray-400 border-b border-gray-700"><th>#</th><th>Pirate</th><th>Stats</th></tr></thead><tbody>${rows}</tbody></table>`;
+            } else {
+                container.innerHTML = '<p class="text-red-400">Failed to load leaderboard</p>';
+            }
+        }
+        document.addEventListener('DOMContentLoaded', loadLeaderboard);
+    </script>
+</body>
+</html>
