@@ -1,33 +1,55 @@
 <!DOCTYPE html>
-<html>
-<head><title>Profile</title><link rel="stylesheet" href="css/style.css"></head>
-<body class="bg-gradient">
-  <div id="navbar"></div>
-  <div class="container" style="max-width:600px;">
-    <h2 class="text-gold" style="font-family:'Pirata One';">Edit Profile</h2>
-    <div class="glass p-4">
-      <input id="pirateName" class="btn" style="width:100%; background:#fff1; color:#fff; margin-bottom:1rem;" placeholder="Pirate Name">
-      <input id="profilePic" class="btn" style="width:100%; background:#fff1; color:#fff; margin-bottom:1rem;" placeholder="Profile Picture URL">
-      <button onclick="updateProfile()" class="btn">Save</button>
-    </div>
-  </div>
-  <script src="js/main.js"></script>
-  <script>
-    requireAuth();
-    const user = getUser();
-    document.getElementById('pirateName').value = user.pirate_name;
-    document.getElementById('profilePic').value = user.profile_pic || '';
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - SABAODY</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pirata+One&display=swap" rel="stylesheet">
+    <style>
+        .pirate { font-family: 'Pirata One', cursive; }
+        body { background: #0b0e1e; color: #e2e8f0; }
+        .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .gold-text { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <nav class="glass rounded-2xl p-4 mb-8 flex justify-between items-center">
+        <h1 class="text-3xl pirate gold-text">⚓ SABAODY</h1>
+        <div class="space-x-4">
+            <a href="profile.html" class="text-yellow-400 font-semibold">Profile</a>
+            <a href="cards.html" class="text-gray-300 hover:text-yellow-400">Cards</a>
+            <a href="store.html" class="text-gray-300 hover:text-yellow-400">Store</a>
+            <a href="leaderboard.html" class="text-gray-300 hover:text-yellow-400">Leaderboard</a>
+            <button onclick="logout()" class="bg-red-500 px-4 py-2 rounded-xl text-white hover:bg-red-600">Logout</button>
+        </div>
+    </nav>
 
-    async function updateProfile() {
-      const res = await apiFetch('/player', {
-        method: 'PUT',
-        body: JSON.stringify({
-          pirate_name: document.getElementById('pirateName').value,
-          profile_pic: document.getElementById('profilePic').value
-        })
-      });
-      if (res.success) alert('Profile updated!');
-    }
-  </script>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Stats -->
+        <div class="glass rounded-2xl p-6">
+            <h2 class="text-2xl pirate mb-4">🏴‍☠️ Pirate Stats</h2>
+            <div id="user-stats" class="space-y-2 text-lg"></div>
+        </div>
+
+        <!-- Recent Cards -->
+        <div class="glass rounded-2xl p-6">
+            <h2 class="text-2xl pirate mb-4">🃏 Recent Cards</h2>
+            <div id="recent-cards" class="grid grid-cols-2 gap-2"></div>
+        </div>
+
+        <!-- Pokémon Party -->
+        <div class="glass rounded-2xl p-6">
+            <h2 class="text-2xl pirate mb-4">🐾 Pokémon Party</h2>
+            <div id="pokemon-party" class="space-y-2"></div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!localStorage.getItem('sabaody_token')) window.location = 'index.html';
+            await loadProfile();
+        });
+    </script>
 </body>
 </html>
