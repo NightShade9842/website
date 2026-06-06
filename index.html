@@ -1,122 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SABAODY Pirates – Login</title>
-  <link rel="stylesheet" href="css/style.css">
-  <style>
-    /* extra mobile‑friendly tweaks */
-    body { margin: 0; padding: 0; }
-    .login-box {
-      max-width: 400px;
-      margin: 10vh auto 0;
-      padding: 2rem;
-      background: rgba(255,255,255,0.05);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 1.5rem;
-    }
-    .login-box h1 {
-      font-family: 'Pirata One', cursive;
-      text-align: center;
-      color: #ffd700;
-      margin-bottom: 1.5rem;
-      font-size: 2rem;
-    }
-    .login-box input {
-      width: 100%;
-      padding: 0.8rem;
-      margin-bottom: 1rem;
-      background: rgba(255,255,255,0.1);
-      border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 0.5rem;
-      color: white;
-      font-size: 1rem;
-    }
-    .login-box input:focus {
-      outline: none;
-      border-color: #ffd700;
-    }
-    .login-box button {
-      width: 100%;
-      padding: 0.8rem;
-      background: #ffd700;
-      border: none;
-      border-radius: 0.5rem;
-      font-weight: bold;
-      font-size: 1rem;
-      color: #000;
-      cursor: pointer;
-    }
-    .login-box button:active {
-      background: #e6c200;
-    }
-    #output {
-      margin-top: 1rem;
-      background: #0a0a0a;
-      padding: 1rem;
-      border-radius: 0.5rem;
-      font-size: 0.8rem;
-      color: #0f0;
-      word-break: break-word;
-      max-height: 200px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-    }
-    .instructions {
-      color: #ccc;
-      font-size: 0.9rem;
-      margin-bottom: 1rem;
-      text-align: center;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚓ SABAODY Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pirata+One&display=swap" rel="stylesheet">
+    <style>
+        .pirate { font-family: 'Pirata One', cursive; }
+        body { background: #0b0e1e; color: #e2e8f0; }
+        .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .gold-text { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    </style>
 </head>
-<body class="bg-gradient">
-  <div class="login-box">
-    <h1>⚓ SABAODY PIRATES</h1>
-    <p class="instructions">Enter your WhatsApp number (with country code) to log in.</p>
-    <input type="text" id="whatsapp" placeholder="e.g. 233560806367" autocomplete="tel">
-    <button onclick="login()">Set Sail ⚓</button>
-    <div id="output"></div>
-  </div>
+<body class="min-h-screen flex items-center justify-center p-6">
+    <div class="glass rounded-3xl p-8 w-full max-w-md text-center">
+        <h1 class="text-5xl pirate gold-text mb-2">⚓ SABAODY</h1>
+        <p class="text-lg mb-8 text-gray-300">One Piece Trading Card Game</p>
 
-  <script>
-    async function login() {
-      let phone = document.getElementById('whatsapp').value.replace(/[+\s]/g, '');
-      const output = document.getElementById('output');
-      output.textContent = '🔄 Checking your account...';
+        <div id="login-box">
+            <p class="mb-4">Login with your WhatsApp number</p>
+            <input type="text" id="phoneInput" placeholder="233540876191" class="w-full bg-gray-800 rounded-xl px-4 py-3 mb-4 text-white border border-gray-600 focus:outline-none focus:border-yellow-400">
+            <button onclick="sendAuthCode()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition">Send Verification Code</button>
+        </div>
 
-      if (!phone) {
-        output.textContent = '❌ Please enter your WhatsApp number.';
-        return;
-      }
-
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ whatsapp_number: phone })
-        });
-
-        const data = await res.json();
-        output.textContent = JSON.stringify(data, null, 2);
-
-        if (data.token && data.user) {
-          // Save credentials and redirect
-          localStorage.setItem('token', data.token);
-          localStorage.setItem('user', JSON.stringify(data.user));
-          output.textContent += '\n\n✅ Login successful! Redirecting…';
-          setTimeout(() => {
-            window.location.href = '/dashboard.html';
-          }, 800);
-        } else {
-          output.textContent = '❌ ' + (data.error || 'Unknown error');
-        }
-      } catch (err) {
-        output.textContent = '⚠️ Network or server error: ' + err.message;
-      }
-    }
-  </script>
+        <div id="code-box" class="hidden mt-4">
+            <p class="mb-4">Enter the code sent to your WhatsApp</p>
+            <input type="text" id="codeInput" placeholder="123456" class="w-full bg-gray-800 rounded-xl px-4 py-3 mb-4 text-white border border-gray-600 focus:outline-none focus:border-yellow-400">
+            <button onclick="verifyCode()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition">Verify & Enter</button>
+        </div>
+    </div>
+    <script src="app.js"></script>
 </body>
 </html>
