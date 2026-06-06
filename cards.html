@@ -1,46 +1,48 @@
 <!DOCTYPE html>
-<html>
-<head><title>Cards</title><link rel="stylesheet" href="css/style.css"></head>
-<body class="bg-gradient">
-  <div id="navbar"></div>
-  <div class="container">
-    <h2 class="text-gold" style="font-family:'Pirata One';">Your Cards</h2>
-    <div id="highTier" class="mb-4"></div>
-    <div id="cardsGrid" class="grid grid-4"></div>
-  </div>
-  <script src="js/main.js"></script>
-  <script>
-    requireAuth();
-    const user = getUser();
-    fetch('/api/cards', { headers: { Authorization: `Bearer ${getToken()}` } })
-      .then(r => r.json())
-      .then(cards => {
-        const highTier = cards.filter(c => ['t5','t6','tx'].includes(c.rarity));
-        if (highTier.length) {
-          let idx = 0;
-          function showSlide() {
-            const card = highTier[idx];
-            document.getElementById('highTier').innerHTML = `
-              <div class="glass p-4" style="text-align:center;">
-                <img src="${card.image_url}" style="max-height:200px;">
-                <h3>${card.card_name}</h3>
-                <p class="text-gold">${card.rarity}</p>
-              </div>
-            `;
-            idx = (idx + 1) % highTier.length;
-          }
-          showSlide();
-          setInterval(showSlide, 3000);
-        }
-        const grid = document.getElementById('cardsGrid');
-        grid.innerHTML = cards.map(card => `
-          <div class="glass p-2">
-            <img src="${card.image_url}" style="width:100%; height:150px; object-fit:contain;">
-            <p class="text-sm">${card.card_name}</p>
-            <p class="text-sm">⚔️${card.attack} 🛡️${card.defense}</p>
-          </div>
-        `).join('');
-      });
-  </script>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cards - SABAODY</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pirata+One&display=swap" rel="stylesheet">
+    <style>
+        .pirate { font-family: 'Pirata One', cursive; }
+        body { background: #0b0e1e; color: #e2e8f0; }
+        .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .card { border-radius: 16px; padding: 12px; transition: transform 0.2s; }
+        .card:hover { transform: scale(1.02); }
+        .rarity-Common { border-left: 4px solid #9ca3af; }
+        .rarity-Uncommon { border-left: 4px solid #22c55e; }
+        .rarity-Rare { border-left: 4px solid #3b82f6; }
+        .rarity-Super { border-left: 4px solid #a855f7; }
+        .rarity-Ultra { border-left: 4px solid #ef4444; }
+        .rarity-Legendary { border-left: 4px solid #f59e0b; }
+        .rarity-Mythic { border-left: 4px solid #ec4899; }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <nav class="glass rounded-2xl p-4 mb-8 flex justify-between items-center">
+        <h1 class="text-3xl pirate gold-text">⚓ SABAODY</h1>
+        <div class="space-x-4">
+            <a href="profile.html" class="text-gray-300 hover:text-yellow-400">Profile</a>
+            <a href="cards.html" class="text-yellow-400 font-semibold">Cards</a>
+            <a href="store.html" class="text-gray-300 hover:text-yellow-400">Store</a>
+            <a href="leaderboard.html" class="text-gray-300 hover:text-yellow-400">Leaderboard</a>
+            <button onclick="logout()" class="bg-red-500 px-4 py-2 rounded-xl text-white">Logout</button>
+        </div>
+    </nav>
+
+    <div class="glass rounded-2xl p-6">
+        <h2 class="text-2xl pirate mb-6">📇 My Card Collection</h2>
+        <div id="card-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4"></div>
+    </div>
+    <script src="app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!localStorage.getItem('sabaody_token')) window.location = 'index.html';
+            await loadCards();
+        });
+    </script>
 </body>
 </html>
