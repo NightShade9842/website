@@ -11,6 +11,14 @@
         body { background: #0b0e1e; color: #e2e8f0; }
         .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
         .gold-text { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .card { border-radius: 16px; padding: 8px; transition: transform 0.2s; }
+        .card:hover { transform: scale(1.03); }
+        .rarity-Common { border-left: 3px solid #9ca3af; }
+        .rarity-Uncommon { border-left: 3px solid #22c55e; }
+        .rarity-Rare { border-left: 3px solid #3b82f6; }
+        .rarity-Super { border-left: 3px solid #a855f7; }
+        .rarity-Ultra { border-left: 3px solid #ef4444; }
+        .rarity-Legendary { border-left: 3px solid #f59e0b; }
     </style>
 </head>
 <body class="min-h-screen p-6">
@@ -26,19 +34,14 @@
     </nav>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Stats -->
         <div class="glass rounded-2xl p-6">
             <h2 class="text-2xl pirate mb-4">🏴‍☠️ Pirate Stats</h2>
             <div id="user-stats" class="space-y-2 text-lg"></div>
         </div>
-
-        <!-- Recent Cards -->
         <div class="glass rounded-2xl p-6">
             <h2 class="text-2xl pirate mb-4">🃏 Recent Cards</h2>
             <div id="recent-cards" class="grid grid-cols-2 gap-2"></div>
         </div>
-
-        <!-- Pokémon Party -->
         <div class="glass rounded-2xl p-6">
             <h2 class="text-2xl pirate mb-4">🐾 Pokémon Party</h2>
             <div id="pokemon-party" class="space-y-2"></div>
