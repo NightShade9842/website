@@ -24,18 +24,15 @@
             <p class="text-gray-400">Please wait a moment</p>
         </div>
 
-        <!-- Manual login (fallback) -->
-        <div id="manual-login">
-            <p class="mb-4">Login with your WhatsApp number</p>
-            <input type="text" id="phoneInput" placeholder="233540876191" class="w-full bg-gray-800 rounded-xl px-4 py-3 mb-4 text-white border border-gray-600 focus:outline-none focus:border-yellow-400">
-            <button onclick="sendAuthCode()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition mb-2">Send Verification Code</button>
-            <p class="text-xs text-gray-500">Or type <span class="text-yellow-400 font-mono">.login</span> in the WhatsApp bot for a one‑click link</p>
-        </div>
-
-        <div id="code-box" class="hidden mt-4">
-            <p class="mb-4">Enter the code sent to your WhatsApp</p>
-            <input type="text" id="codeInput" placeholder="123456" class="w-full bg-gray-800 rounded-xl px-4 py-3 mb-4 text-white border border-gray-600 focus:outline-none focus:border-yellow-400">
-            <button onclick="verifyCode()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition">Verify & Enter</button>
+        <!-- Instruction when no token -->
+        <div id="no-token" class="hidden">
+            <p class="text-gray-300 mb-4">Log in easily with one click:</p>
+            <ol class="text-left text-gray-400 space-y-2 mb-6">
+                <li>1. Open WhatsApp and send <span class="text-yellow-400 font-mono">.login</span> to the bot</li>
+                <li>2. Click the link the bot sends you</li>
+                <li>3. You'll be automatically logged in here</li>
+            </ol>
+            <p class="text-xs text-gray-500">If you haven't registered yet, use <span class="text-yellow-400 font-mono">.register &lt;name&gt;</span> first.</p>
         </div>
     </div>
     <script src="app.js"></script>
