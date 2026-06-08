@@ -18,10 +18,18 @@
         <h1 class="text-5xl pirate gold-text mb-2">⚓ SABAODY</h1>
         <p class="text-lg mb-8 text-gray-300">One Piece Trading Card Game</p>
 
-        <div id="login-box">
+        <!-- Auto‑login when token present -->
+        <div id="auto-login" class="hidden">
+            <p class="text-yellow-400 text-xl font-bold mb-2">🔗 Logging you in...</p>
+            <p class="text-gray-400">Please wait a moment</p>
+        </div>
+
+        <!-- Manual login (fallback) -->
+        <div id="manual-login">
             <p class="mb-4">Login with your WhatsApp number</p>
             <input type="text" id="phoneInput" placeholder="233540876191" class="w-full bg-gray-800 rounded-xl px-4 py-3 mb-4 text-white border border-gray-600 focus:outline-none focus:border-yellow-400">
-            <button onclick="sendAuthCode()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition">Send Verification Code</button>
+            <button onclick="sendAuthCode()" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-3 rounded-xl transition mb-2">Send Verification Code</button>
+            <p class="text-xs text-gray-500">Or type <span class="text-yellow-400 font-mono">.login</span> in the WhatsApp bot for a one‑click link</p>
         </div>
 
         <div id="code-box" class="hidden mt-4">
