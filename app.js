@@ -1,56 +1,16 @@
 // ===== CONFIG =====
-const API_BASE = 'https://your-project.vercel.app/api';  // ← Change to your Vercel API URL
-
-// ===== AUTH (manual fallback) =====
-function sendAuthCode() {
-    const phone = document.getElementById('phoneInput').value.trim();
-    if (!phone) return alert('Enter your WhatsApp number');
-    fetch(API_BASE + '/auth/send-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone })
-    }).then(r => r.json()).then(data => {
-        if (data.success) {
-            document.getElementById('manual-login').classList.add('hidden');
-            document.getElementById('code-box').classList.remove('hidden');
-        } else {
-            alert(data.error || 'Failed to send code');
-        }
-    }).catch(() => alert('Connection error'));
-}
-
-function verifyCode() {
-    const code = document.getElementById('codeInput').value.trim();
-    const phone = document.getElementById('phoneInput').value.trim();
-    fetch(API_BASE + '/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, code })
-    }).then(r => r.json()).then(data => {
-        if (data.token) {
-            localStorage.setItem('sabaody_token', data.token);
-            localStorage.setItem('sabaody_user', JSON.stringify(data.user));
-            window.location = 'profile.html';
-        } else {
-            alert(data.error || 'Invalid code');
-        }
-    }).catch(() => alert('Connection error'));
-}
-
-function logout() {
-    localStorage.removeItem('sabaody_token');
-    localStorage.removeItem('sabaody_user');
-    window.location = 'index.html';
-}
+// The API is served by Vercel on the same domain under /api/
+const API_BASE = '/api';
 
 // ===== AUTO‑LOGIN via token (from .login link) =====
 window.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     if (token) {
-        document.getElementById('manual-login').classList.add('hidden');
         document.getElementById('auto-login').classList.remove('hidden');
         loginWithToken(token);
+    } else {
+        document.getElementById('no-token').classList.remove('hidden');
     }
 });
 
@@ -63,15 +23,22 @@ async function loginWithToken(token) {
             localStorage.setItem('sabaody_user', JSON.stringify(data.user));
             window.location.href = 'profile.html';
         } else {
-            alert(data.error || 'Invalid or expired link.');
+            alert(data.error || 'Invalid or expired link. Please get a new .login link.');
             document.getElementById('auto-login').classList.add('hidden');
-            document.getElementById('manual-login').classList.remove('hidden');
+            document.getElementById('no-token').classList.remove('hidden');
         }
     } catch (e) {
-        alert('Connection error');
+        alert('Connection error. Please try again later.');
         document.getElementById('auto-login').classList.add('hidden');
-        document.getElementById('manual-login').classList.remove('hidden');
+        document.getElementById('no-token').classList.remove('hidden');
     }
+}
+
+// ===== LOGOUT =====
+function logout() {
+    localStorage.removeItem('sabaody_token');
+    localStorage.removeItem('sabaody_user');
+    window.location = 'index.html';
 }
 
 // ===== API HELPER =====
@@ -108,6 +75,7 @@ async function loadProfile() {
         <p class="text-red-400">🐾 Pokémon: ${data.pokemonCount}</p>
     `;
 
+    // Recent cards
     const cards = await apiFetch('/cards/' + user.id);
     const cardDiv = document.getElementById('recent-cards');
     if (cards && cards.length) {
