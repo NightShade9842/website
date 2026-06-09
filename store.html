@@ -30,8 +30,11 @@
         <div class="flex space-x-4 mb-6 overflow-x-auto">
             <button onclick="switchTab('cards')" class="tab-btn tab-active" id="tab-cards">🃏 Card Shop</button>
             <button onclick="switchTab('auctions')" class="tab-btn" id="tab-auctions">🔨 Auctions</button>
-            <button onclick="switchTab('events')" class="tab-btn" id="tab-events">🎪 Event Store</button>
-            <button onclick="switchTab('items')" class="tab-btn" id="tab-items">🎁 Item Store</button>
+            <button onclick="switchTab('events')" class="tab-btn" id="tab-events">🎪 Events</button>
+            <button onclick="switchTab('items')" class="tab-btn" id="tab-items">🎁 Items</button>
+            <button onclick="switchTab('pokemart')" class="tab-btn" id="tab-pokemart">🛒 PokéMart</button>
+            <button onclick="switchTab('guild')" class="tab-btn" id="tab-guild">⚔️ Guild</button>
+            <button onclick="switchTab('hatchery')" class="tab-btn" id="tab-hatchery">🥚 Hatchery</button>
         </div>
         <div id="tab-content" class="min-h-[400px]"></div>
     </div>
@@ -52,6 +55,9 @@
                 case 'auctions': await loadAuctions(container); break;
                 case 'events': await loadEventStore(container); break;
                 case 'items': await loadItemStore(container); break;
+                case 'pokemart': await loadPokeMart(container); break;
+                case 'guild': await loadGuildStore(container); break;
+                case 'hatchery': await loadHatchery(container); break;
             }
         }
         document.addEventListener('DOMContentLoaded', () => {
