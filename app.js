@@ -1,5 +1,4 @@
 // ===== CONFIG =====
-// The API is served by Vercel on the same domain under /api/
 const API_BASE = '/api';
 
 // ===== AUTO‑LOGIN via token (from .login link) =====
@@ -7,10 +6,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     if (token) {
-        document.getElementById('auto-login').classList.remove('hidden');
+        document.getElementById('auto-login')?.classList.remove('hidden');
+        document.getElementById('no-token')?.classList.add('hidden');
         loginWithToken(token);
     } else {
-        document.getElementById('no-token').classList.remove('hidden');
+        document.getElementById('auto-login')?.classList.add('hidden');
+        document.getElementById('no-token')?.classList.remove('hidden');
     }
 });
 
@@ -23,14 +24,14 @@ async function loginWithToken(token) {
             localStorage.setItem('sabaody_user', JSON.stringify(data.user));
             window.location.href = 'profile.html';
         } else {
-            alert(data.error || 'Invalid or expired link. Please get a new .login link.');
-            document.getElementById('auto-login').classList.add('hidden');
-            document.getElementById('no-token').classList.remove('hidden');
+            alert(data.error || 'Invalid or expired link. Get a new .login link.');
+            document.getElementById('auto-login')?.classList.add('hidden');
+            document.getElementById('no-token')?.classList.remove('hidden');
         }
     } catch (e) {
-        alert('Connection error. Please try again later.');
-        document.getElementById('auto-login').classList.add('hidden');
-        document.getElementById('no-token').classList.remove('hidden');
+        alert('Connection error. Try again later.');
+        document.getElementById('auto-login')?.classList.add('hidden');
+        document.getElementById('no-token')?.classList.remove('hidden');
     }
 }
 
@@ -75,7 +76,6 @@ async function loadProfile() {
         <p class="text-red-400">🐾 Pokémon: ${data.pokemonCount}</p>
     `;
 
-    // Recent cards
     const cards = await apiFetch('/cards/' + user.id);
     const cardDiv = document.getElementById('recent-cards');
     if (cards && cards.length) {
@@ -93,7 +93,7 @@ async function loadProfile() {
     document.getElementById('pokemon-party').innerHTML = '<p class="text-gray-400">Party info coming soon</p>';
 }
 
-// ===== CARDS =====
+// ===== CARDS COLLECTION =====
 async function loadCards() {
     const user = JSON.parse(localStorage.getItem('sabaody_user'));
     const cards = await apiFetch('/cards/' + user.id);
@@ -114,7 +114,37 @@ async function loadCards() {
     `).join('');
 }
 
-// ===== STORE TABS =====
+// ===== STORE TABS LOGIC =====
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+    const btn = document.getElementById('tab-' + tab);
+    if (btn) btn.classList.add('tab-active');
+    loadTabContent();
+}
+
+async function loadTabContent() {
+    const container = document.getElementById('tab-content');
+    switch(currentTab) {
+        case 'cards': await loadCardShop(container); break;
+        case 'auctions': await loadAuctions(container); break;
+        case 'events': await loadEventStore(container); break;
+        case 'items': await loadItemStore(container); break;
+        case 'pokemart': await loadPokeMart(container); break;
+        case 'guild': await loadGuildStore(container); break;
+        case 'hatchery': await loadHatchery(container); break;
+    }
+}
+
+let currentTab = 'cards';
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!localStorage.getItem('sabaody_token')) window.location = 'index.html';
+    // For pages that don't have store tabs, this won't break
+    if (document.getElementById('tab-content')) loadTabContent();
+});
+
+// ===== CARD SHOP (player marketplace) =====
 async function loadCardShop(container) {
     const listings = await apiFetch('/shop/cards');
     if (!listings || !listings.length) {
@@ -151,6 +181,7 @@ async function buyCard(listingId) {
     }
 }
 
+// ===== AUCTIONS =====
 async function loadAuctions(container) {
     const auctions = await apiFetch('/auctions');
     if (!auctions || !auctions.length) {
@@ -192,6 +223,7 @@ async function placeBid(auctionId) {
     }
 }
 
+// ===== EVENT STORE =====
 async function loadEventStore(container) {
     const items = await apiFetch('/events/cards');
     if (!items || !items.length) {
@@ -223,6 +255,7 @@ async function buyEventItem(itemId) {
     }
 }
 
+// ===== ITEM STORE (Beli/Gems) =====
 async function loadItemStore(container) {
     const items = await apiFetch('/store/items');
     if (!items || !items.length) {
@@ -256,3 +289,143 @@ async function buyStoreItem(itemId) {
         alert(res?.error || 'Purchase failed');
     }
 }
+
+// ===== POKéMART =====
+async function loadPokeMart(container) {
+    const items = await apiFetch('/store/pokemart');
+    if (!items || !items.length) {
+        container.innerHTML = '<p class="text-gray-400">PokéMart is empty.</p>';
+        return;
+    }
+    container.innerHTML = items.map(item => `
+        <div class="glass rounded-xl p-4 flex items-center justify-between mb-3">
+            <div>
+                <p class="font-bold">${item.name}</p>
+                <p class="text-sm text-gray-400">${item.description}</p>
+                <p class="text-yellow-400">💰 ${Number(item.price_beli).toLocaleString()} Beli</p>
+                <p class="text-xs text-gray-500">Qty: ${item.quantity_per_purchase}</p>
+            </div>
+            <button onclick="buyPokeMartItem(${item.id})" class="bg-blue-500 px-4 py-2 rounded-lg text-black font-semibold hover:bg-blue-400">Buy</button>
+        </div>
+    `).join('');
+}
+
+async function buyPokeMartItem(itemId) {
+    const res = await apiFetch('/store/buy-pokemart', {
+        method: 'POST',
+        body: JSON.stringify({ itemId })
+    });
+    if (res?.success) {
+        alert('Purchased! Added to inventory.');
+        switchTab('pokemart');
+    } else {
+        alert(res?.error || 'Purchase failed');
+    }
+}
+
+// ===== GUILD STORE =====
+async function loadGuildStore(container) {
+    const items = await apiFetch('/store/guild');
+    if (!items || !items.length) {
+        container.innerHTML = '<p class="text-gray-400">Guild store is empty.</p>';
+        return;
+    }
+    container.innerHTML = items.map(item => `
+        <div class="glass rounded-xl p-4 flex items-center justify-between mb-3">
+            <div>
+                <p class="font-bold">${item.name}</p>
+                <p class="text-sm text-gray-400">${item.description}</p>
+                <p class="text-purple-400">💨 ${item.price_dust} Dust</p>
+            </div>
+            <button onclick="buyGuildItem(${item.id})" class="bg-purple-500 px-4 py-2 rounded-lg text-white font-semibold hover:bg-purple-400">Buy</button>
+        </div>
+    `).join('');
+}
+
+async function buyGuildItem(itemId) {
+    const res = await apiFetch('/store/buy-guild', {
+        method: 'POST',
+        body: JSON.stringify({ itemId })
+    });
+    if (res?.success) {
+        alert('Purchased!');
+        switchTab('guild');
+    } else {
+        alert(res?.error || 'Purchase failed');
+    }
+}
+
+// ===== HATCHERY =====
+async function loadHatchery(container) {
+    const items = await apiFetch('/store/hatchery');
+    if (!items || !items.length) {
+        container.innerHTML = '<p class="text-gray-400">Hatchery is empty.</p>';
+        return;
+    }
+    const rarityEmoji = { 'Common': '⚪', 'Uncommon': '🟢', 'Rare': '🔵', 'Epic': '🟣', 'Legendary': '🟠' };
+    container.innerHTML = items.map(item => {
+        let priceText = '';
+        if (item.price_beli) priceText += `💰 ${Number(item.price_beli).toLocaleString()} Beli `;
+        if (item.price_gems) priceText += `💎 ${item.price_gems} Gems `;
+        priceText = priceText.trim() || 'Free';
+        return `
+            <div class="glass rounded-xl p-4 flex items-center justify-between mb-3">
+                <div>
+                    <p class="font-bold">${rarityEmoji[item.egg_rarity] || '🥚'} ${item.name}</p>
+                    <p class="text-sm text-gray-400">${item.description}</p>
+                    <p class="text-yellow-400">${priceText}</p>
+                    <p class="text-xs text-gray-500">🐣 ${item.egg_rarity} Pokémon (×${item.pokemon_count})</p>
+                </div>
+                <button onclick="buyHatcheryItem(${item.id})" class="bg-pink-500 px-4 py-2 rounded-lg text-white font-semibold hover:bg-pink-400">Buy</button>
+            </div>
+        `;
+    }).join('');
+}
+
+async function buyHatcheryItem(itemId) {
+    const res = await apiFetch('/store/buy-hatchery', {
+        method: 'POST',
+        body: JSON.stringify({ itemId })
+    });
+    if (res?.success) {
+        alert('Egg added to inventory!');
+        switchTab('hatchery');
+    } else {
+        alert(res?.error || 'Purchase failed');
+    }
+}
+
+// ===== LEADERBOARD =====
+let currentLB = 'level';
+function switchLB(type) {
+    currentLB = type;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+    document.getElementById('lb-' + type).classList.add('tab-active');
+    loadLeaderboard();
+}
+async function loadLeaderboard() {
+    const container = document.getElementById('lb-content');
+    if (!container) return;
+    container.innerHTML = 'Loading...';
+    const data = await apiFetch('/leaderboard/' + currentLB);
+    if (Array.isArray(data)) {
+        const rows = data.map((e,i) => {
+            let info = '';
+            if (currentLB === 'level') info = `Level ${e.level} (XP: ${e.xp})`;
+            else if (currentLB === 'richest') info = `💰 ${e.total ? e.total.toLocaleString() : (e.beli+e.bank).toLocaleString()}`;
+            else if (currentLB === 'legendary') info = `${e.count} Legendary Cards`;
+            else if (currentLB === 'guild') info = `Treasury: ${e.treasury?.toLocaleString()}, Members: ${e.members}`;
+            return `<tr class="border-b border-gray-800">
+                <td class="py-2">${i+1}</td>
+                <td class="py-2">${e.pirate_name || e.name || 'Unknown'}</td>
+                <td class="py-2">${info}</td>
+            </tr>`;
+        }).join('');
+        container.innerHTML = `<table class="w-full text-left"><thead><tr class="text-gray-400 border-b border-gray-700"><th>#</th><th>Pirate</th><th>Stats</th></tr></thead><tbody>${rows}</tbody></table>`;
+    } else {
+        container.innerHTML = '<p class="text-red-400">Failed to load leaderboard</p>';
+    }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('lb-content')) loadLeaderboard();
+});
