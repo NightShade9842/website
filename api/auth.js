@@ -22,21 +22,18 @@ function getPool() {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me';
 
-// Helper: get user id from JWT
 function getUserIdFromToken(req) {
     const authHeader = req.headers.authorization;
     if (!authHeader) return null;
     try {
         const token = authHeader.split(' ')[1];
-        const decoded = jwt.verify(token, JWT_SECRET);
-        return decoded.userId;
+        return jwt.verify(token, JWT_SECRET).userId;
     } catch (e) {
         return null;
     }
 }
 
 module.exports = async (req, res) => {
-    // CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -47,7 +44,7 @@ module.exports = async (req, res) => {
     const db = getPool();
 
     try {
-        // ── 1. One‑click login (.login command) ──
+        // ── One‑click login ──
         if (path === '/login' && req.method === 'GET') {
             const token = url.searchParams.get('token');
             if (!token) return res.status(400).json({ error: 'Missing token' });
@@ -55,15 +52,11 @@ module.exports = async (req, res) => {
             const conn = await db.getConnection();
             try {
                 const [[row]] = await conn.execute(
-                    'SELECT user_id FROM link_tokens WHERE token = ? AND expires_at > NOW()',
-                    [token]
+                    'SELECT user_id FROM link_tokens WHERE token = ? AND expires_at > NOW()', [token]
                 );
                 if (!row) return res.status(401).json({ error: 'Invalid or expired token' });
-
-                // One‑time use – delete token
                 await conn.execute('DELETE FROM link_tokens WHERE token = ?', [token]);
 
-                // Fetch player data
                 const [[player]] = await conn.execute(
                     `SELECT user_id, pirate_name, level, xp, beli, bank, gems, gold_coins, premium_until
                      FROM players WHERE user_id = ?`, [row.user_id]
@@ -71,7 +64,6 @@ module.exports = async (req, res) => {
                 if (!player) return res.status(404).json({ error: 'Player not found' });
 
                 const jwtToken = jwt.sign({ userId: player.user_id }, JWT_SECRET, { expiresIn: '7d' });
-
                 return res.json({
                     token: jwtToken,
                     user: {
@@ -87,7 +79,7 @@ module.exports = async (req, res) => {
             }
         }
 
-        // ── 2. Protected routes ──
+        // ── Protected routes ──
         const userId = getUserIdFromToken(req);
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -134,16 +126,13 @@ module.exports = async (req, res) => {
                     'SELECT * FROM card_listings WHERE id = ? AND status = "active" FOR UPDATE', [listingId]
                 );
                 if (!listing) throw new Error('Listing not available');
-                const [[buyer]] = await conn.execute(
-                    'SELECT beli FROM players WHERE user_id = ? FOR UPDATE', [userId]
-                );
+                const [[buyer]] = await conn.execute('SELECT beli FROM players WHERE user_id = ? FOR UPDATE', [userId]);
                 if (!buyer || buyer.beli < listing.price) throw new Error('Not enough Beli');
 
                 await conn.execute('UPDATE cards SET owner_id = ? WHERE id = ?', [userId, listing.card_id]);
                 await conn.execute('UPDATE players SET beli = beli - ? WHERE user_id = ?', [listing.price, userId]);
                 await conn.execute('UPDATE players SET beli = beli + ? WHERE user_id = ?', [listing.price, listing.seller_id]);
                 await conn.execute("UPDATE card_listings SET status = 'sold', buyer_id = ? WHERE id = ?", [userId, listingId]);
-
                 await conn.commit();
                 return res.json({ success: true });
             } catch (err) {
@@ -193,7 +182,6 @@ module.exports = async (req, res) => {
                 await conn.execute('INSERT INTO auction_bids (auction_id, bidder_id, bid_amount) VALUES (?, ?, ?)', [auctionId, userId, amount]);
                 await conn.execute('UPDATE auctions SET current_bid = ? WHERE id = ?', [amount, auctionId]);
                 await conn.execute('UPDATE players SET beli = beli - ? WHERE user_id = ?', [amount, userId]);
-
                 await conn.commit();
                 return res.json({ success: true });
             } catch (err) {
@@ -241,7 +229,7 @@ module.exports = async (req, res) => {
             }
         }
 
-        // Item store (gems / beli)
+        // ── Item Store (Beli / Gems) ──
         if (path === '/store/items' && req.method === 'GET') {
             const [items] = await db.execute(
                 'SELECT * FROM store_items WHERE (price_gems > 0 OR price_beli > 0) AND (stock > 0 OR stock = -1)'
@@ -287,6 +275,119 @@ module.exports = async (req, res) => {
             }
         }
 
+        // ── PokéMart (Beli) ──
+        if (path === '/store/pokemart' && req.method === 'GET') {
+            const [items] = await db.execute('SELECT * FROM pokemon_shop ORDER BY id');
+            return res.json(items);
+        }
+
+        if (path === '/store/buy-pokemart' && req.method === 'POST') {
+            const { itemId } = req.body || {};
+            if (!itemId) return res.status(400).json({ error: 'Missing itemId' });
+            const conn = await db.getConnection();
+            try {
+                await conn.beginTransaction();
+                const [[item]] = await conn.execute('SELECT * FROM pokemon_shop WHERE id = ? FOR UPDATE', [itemId]);
+                if (!item) throw new Error('Item not found');
+
+                const [[player]] = await conn.execute('SELECT beli FROM players WHERE user_id = ? FOR UPDATE', [userId]);
+                if (!player || player.beli < item.price_beli) throw new Error('Not enough Beli');
+
+                await conn.execute('UPDATE players SET beli = beli - ? WHERE user_id = ?', [item.price_beli, userId]);
+                await conn.execute(
+                    'INSERT INTO inventory (owner_id, item_name, item_type, quantity) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?',
+                    [userId, item.name, item.item_type, item.quantity_per_purchase, item.quantity_per_purchase]
+                );
+                await conn.commit();
+                return res.json({ success: true });
+            } catch (err) {
+                await conn.rollback();
+                return res.status(400).json({ error: err.message });
+            } finally {
+                conn.release();
+            }
+        }
+
+        // ── Guild Store (Dust) ──
+        if (path === '/store/guild' && req.method === 'GET') {
+            const [items] = await db.execute('SELECT * FROM guild_store_items ORDER BY id');
+            return res.json(items);
+        }
+
+        if (path === '/store/buy-guild' && req.method === 'POST') {
+            const { itemId } = req.body || {};
+            if (!itemId) return res.status(400).json({ error: 'Missing itemId' });
+            const conn = await db.getConnection();
+            try {
+                await conn.beginTransaction();
+                const [[item]] = await conn.execute('SELECT * FROM guild_store_items WHERE id = ? FOR UPDATE', [itemId]);
+                if (!item) throw new Error('Item not found');
+
+                // Check guild membership and dust balance
+                const [[player]] = await conn.execute(
+                    'SELECT guild_id, dust FROM players WHERE user_id = ? FOR UPDATE', [userId]
+                );
+                if (!player || !player.guild_id) throw new Error('You must be in a guild to buy from the Guild Store');
+                if (player.dust < item.price_dust) throw new Error('Not enough Dust');
+
+                await conn.execute('UPDATE players SET dust = dust - ? WHERE user_id = ?', [item.price_dust, userId]);
+                await conn.execute(
+                    'INSERT INTO inventory (owner_id, item_name, item_type, quantity) VALUES (?, ?, ?, 1) ON DUPLICATE KEY UPDATE quantity = quantity + 1',
+                    [userId, item.name, item.item_type]
+                );
+                await conn.commit();
+                return res.json({ success: true });
+            } catch (err) {
+                await conn.rollback();
+                return res.status(400).json({ error: err.message });
+            } finally {
+                conn.release();
+            }
+        }
+
+        // ── Hatchery (Beli / Gems) ──
+        if (path === '/store/hatchery' && req.method === 'GET') {
+            const [items] = await db.execute('SELECT * FROM hatchery_items ORDER BY id');
+            return res.json(items);
+        }
+
+        if (path === '/store/buy-hatchery' && req.method === 'POST') {
+            const { itemId } = req.body || {};
+            if (!itemId) return res.status(400).json({ error: 'Missing itemId' });
+            const conn = await db.getConnection();
+            try {
+                await conn.beginTransaction();
+                const [[item]] = await conn.execute('SELECT * FROM hatchery_items WHERE id = ? FOR UPDATE', [itemId]);
+                if (!item) throw new Error('Item not found');
+
+                const [[player]] = await conn.execute('SELECT beli, gems FROM players WHERE user_id = ? FOR UPDATE', [userId]);
+                if (!player) throw new Error('Player not found');
+
+                let paid = false;
+                if (item.price_gems > 0 && player.gems >= item.price_gems) {
+                    await conn.execute('UPDATE players SET gems = gems - ? WHERE user_id = ?', [item.price_gems, userId]);
+                    paid = true;
+                } else if (item.price_beli > 0 && player.beli >= item.price_beli) {
+                    await conn.execute('UPDATE players SET beli = beli - ? WHERE user_id = ?', [item.price_beli, userId]);
+                    paid = true;
+                }
+                if (!paid) throw new Error('Not enough gems or beli');
+
+                // Add egg to inventory
+                await conn.execute(
+                    'INSERT INTO inventory (owner_id, item_name, item_type, quantity) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?',
+                    [userId, item.name, 'egg', item.pokemon_count, item.pokemon_count]
+                );
+                await conn.commit();
+                return res.json({ success: true });
+            } catch (err) {
+                await conn.rollback();
+                return res.status(400).json({ error: err.message });
+            } finally {
+                conn.release();
+            }
+        }
+
         // Leaderboard
         if (path.startsWith('/leaderboard/') && req.method === 'GET') {
             const type = path.split('/leaderboard/')[1];
@@ -310,7 +411,6 @@ module.exports = async (req, res) => {
             return res.json(rows);
         }
 
-        // Fallback
         return res.status(404).json({ error: 'Not found' });
 
     } catch (err) {
