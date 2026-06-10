@@ -125,6 +125,7 @@ function switchTab(tab) {
 
 async function loadTabContent() {
     const container = document.getElementById('tab-content');
+    if (!container) return;
     switch(currentTab) {
         case 'cards': await loadCardShop(container); break;
         case 'auctions': await loadAuctions(container); break;
@@ -140,7 +141,6 @@ let currentTab = 'cards';
 
 document.addEventListener('DOMContentLoaded', () => {
     if (!localStorage.getItem('sabaody_token')) window.location = 'index.html';
-    // For pages that don't have store tabs, this won't break
     if (document.getElementById('tab-content')) loadTabContent();
 });
 
@@ -428,4 +428,256 @@ async function loadLeaderboard() {
 }
 document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('lb-content')) loadLeaderboard();
+});
+
+// ===== BOARD WAR =====
+let currentBoardTab = 'lobby';
+let currentWarId = null;
+let pollInterval = null;
+
+function switchBoardTab(tab) {
+    currentBoardTab = tab;
+    document.querySelectorAll('.board-tab-btn').forEach(b => b.classList.remove('tab-active'));
+    document.getElementById('boardtab-' + tab)?.classList.add('tab-active');
+    loadBoardContent();
+}
+
+async function loadBoardContent() {
+    const container = document.getElementById('board-content');
+    if (!container) return;
+    if (currentBoardTab === 'lobby') await loadLobby(container);
+    else if (currentBoardTab === 'create') showCreateWarForm(container);
+}
+
+async function loadLobby(container) {
+    const wars = await apiFetch('/boardwar/list');
+    if (!wars?.length) {
+        container.innerHTML = '<p class="text-gray-400">No active board wars. Create one!</p>';
+        return;
+    }
+    container.innerHTML = wars.map(w => `
+        <div class="glass rounded-xl p-4 mb-3 flex justify-between items-center">
+            <div>
+                <p class="font-bold text-lg">${w.name}</p>
+                <p class="text-sm text-gray-400">Players: ${w.player_count}/${w.max_guilds}</p>
+                <p class="text-sm text-gray-400">Status: ${w.status}</p>
+            </div>
+            <div class="space-x-2">
+                ${w.status === 'pending' ? `<button onclick="joinBoardWar(${w.id})" class="bg-blue-500 px-4 py-2 rounded-lg text-white hover:bg-blue-400">Join</button>` : ''}
+                ${w.status === 'active' ? `<button onclick="viewBoardWar(${w.id})" class="bg-yellow-500 px-4 py-2 rounded-lg text-black hover:bg-yellow-400">Enter</button>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function showCreateWarForm(container) {
+    container.innerHTML = `
+        <div class="max-w-md mx-auto">
+            <h3 class="text-xl font-bold mb-4">Create Board War</h3>
+            <input type="text" id="warName" placeholder="War Name" class="w-full bg-gray-800 rounded-xl px-4 py-3 mb-4 text-white border border-gray-600">
+            <select id="maxPlayers" class="w-full bg-gray-800 rounded-xl px-4 py-3 mb-4 text-white border border-gray-600">
+                <option value="2">2 Players</option>
+                <option value="3">3 Players</option>
+                <option value="4">4 Players</option>
+            </select>
+            <button onclick="createBoardWar()" class="w-full bg-yellow-500 py-3 rounded-xl text-black font-bold hover:bg-yellow-400">Create War</button>
+        </div>
+    `;
+}
+
+async function createBoardWar() {
+    const name = document.getElementById('warName').value;
+    const maxPlayers = parseInt(document.getElementById('maxPlayers').value);
+    if (!name) return alert('Enter war name');
+    const res = await apiFetch('/boardwar/create', {
+        method: 'POST',
+        body: JSON.stringify({ name, maxPlayers })
+    });
+    if (res?.success) {
+        alert('War created!');
+        switchBoardTab('lobby');
+    } else {
+        alert(res?.error || 'Failed');
+    }
+}
+
+async function joinBoardWar(warId) {
+    const captain = prompt('Choose your captain:\n\n1. Luffy - +1 movement\n2. Zoro - wins ties\n3. Nami - +20% Beli\n4. Sanji - immune to Marine\n5. Robin - see ahead\n\nType: luffy, zoro, nami, sanji, or robin');
+    if (!captain) return;
+    const validCaptains = ['luffy', 'zoro', 'nami', 'sanji', 'robin'];
+    if (!validCaptains.includes(captain.toLowerCase())) return alert('Invalid captain choice');
+    const res = await apiFetch('/boardwar/join', {
+        method: 'POST',
+        body: JSON.stringify({ warId, captain: captain.toLowerCase() })
+    });
+    if (res?.success) {
+        alert('Joined! The war will start when all players have joined.');
+        switchBoardTab('lobby');
+    } else {
+        alert(res?.error || 'Failed');
+    }
+}
+
+async function viewBoardWar(warId) {
+    currentWarId = warId;
+    document.getElementById('board-content').innerHTML = '<p class="text-yellow-400 text-center py-8">Loading board...</p>';
+    await pollGameState();
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(pollGameState, 5000);
+}
+
+async function pollGameState() {
+    if (!currentWarId) return;
+    const data = await apiFetch('/boardwar/state/' + currentWarId);
+    if (!data) return;
+    renderBoard(data);
+}
+
+function renderBoard(data) {
+    const { sessions, tiles, war, yourTurn } = data;
+    const container = document.getElementById('board-content');
+    if (!container) return;
+
+    const colors = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b'];
+    const emojis = ['🔴', '🔵', '🟢', '🟡'];
+    const tileEmojis = {
+        'start': '🏁', 'raftel': '👑', 'island': '🏝️', 'marine': '⚓',
+        'treasure': '💰', 'yonko': '🐉', 'thriller': '💀', 'weather': '🌀',
+        'poseidon': '🔱', 'calm': '😴'
+    };
+
+    let html = `<h2 class="text-2xl pirate mb-4">${war.name}</h2>`;
+    html += `<p class="text-sm text-gray-400 mb-4">${war.status === 'active' ? '⚔️ War in progress!' : '⏳ Waiting for players...'}</p>`;
+
+    // Board grid
+    html += '<div class="grid grid-cols-9 gap-1 mb-6">';
+    tiles.forEach((tile, index) => {
+        html += `<div class="board-tile tile-${tile.tile_type} relative text-center text-xs" title="${tile.name}: ${tile.description}">
+            <span class="text-lg">${tileEmojis[tile.tile_type] || '❓'}</span>`;
+
+        // Player tokens
+        sessions.forEach((s, i) => {
+            const pos = s.position % 45;
+            if (pos === index) {
+                html += `<div class="player-token" style="background: ${colors[i]}; top: -8px; right: -8px;" title="${s.guild_name}">${['L','Z','N','S'][i] || 'P'}</div>`;
+            }
+        });
+
+        html += '</div>';
+    });
+    html += '</div>';
+
+    // Player stats
+    html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">';
+    sessions.forEach((s, i) => {
+        html += `
+            <div class="glass rounded-xl p-4">
+                <p class="font-bold text-lg">${emojis[i]} ${s.guild_name}</p>
+                <p class="text-sm text-gray-400">Captain: ${s.captain}</p>
+                <p class="text-yellow-400 text-xl">⭐ ${s.stars} Stars</p>
+                <p class="text-blue-400">💰 ${Number(s.beli).toLocaleString()} Beli</p>
+                <p class="text-gray-400">📍 Tile: ${s.position % 45}</p>
+                <p class="text-xs text-gray-500">Laps: ${s.laps_completed} | Wins: ${s.mini_games_won}/${s.mini_games_played}</p>
+                ${s.is_current_turn ? '<p class="text-green-400 font-bold mt-2">▶ CURRENT TURN</p>' : ''}
+            </div>
+        `;
+    });
+    html += '</div>';
+
+    // Roll button (if it's your turn)
+    if (yourTurn) {
+        html += `<div class="text-center">
+            <button onclick="rollDice()" class="bg-yellow-500 hover:bg-yellow-400 px-8 py-4 rounded-xl text-black font-bold text-2xl pirate animate-pulse">🎲 Roll Dice!</button>
+        </div>`;
+    } else {
+        html += '<p class="text-center text-gray-400">Waiting for other guild\'s turn...</p>';
+    }
+
+    container.innerHTML = html;
+}
+
+async function rollDice() {
+    if (!currentWarId) return;
+    const res = await apiFetch('/boardwar/roll', {
+        method: 'POST',
+        body: JSON.stringify({ warId: currentWarId })
+    });
+    if (!res) return;
+
+    const tileData = res.tile?.data ? JSON.parse(typeof res.tile.data === 'string' ? res.tile.data : JSON.stringify(res.tile.data)) : null;
+
+    // Check if tile triggers a mini-game
+    if (tileData?.mini_game) {
+        const gameType = tileData.mini_game.replace(/_/g, '-');
+        alert(`Rolled: ${res.roll}! 🎲\n\nLanded on: ${res.tile?.name || 'Unknown'}\n${res.tile?.description || ''}\n\nA mini-game will now start!`);
+        
+        // Check if mini-game file exists, otherwise show alert
+        const gameUrl = `/mini-games/${gameType}.html`;
+        fetch(gameUrl, { method: 'HEAD' }).then(r => {
+            if (r.ok) {
+                document.getElementById('miniGameOverlay').classList.remove('hidden');
+                document.getElementById('miniGameFrame').src = gameUrl;
+            } else {
+                // Fallback: simulate mini-game with a simple prompt
+                simulateMiniGame(gameType, tileData);
+            }
+        }).catch(() => simulateMiniGame(gameType, tileData));
+    } else if (tileData?.beli_bonus) {
+        alert(`Rolled: ${res.roll}! 🎲\n\nLanded on: ${res.tile?.name}\n+${tileData.beli_bonus} Beli!`);
+        pollGameState();
+    } else if (tileData?.star_bonus) {
+        alert(`Rolled: ${res.roll}! 🎲\n\nLanded on: ${res.tile?.name}\n+${tileData.star_bonus} Stars!`);
+        pollGameState();
+    } else if (tileData?.move_back) {
+        alert(`Rolled: ${res.roll}! 🎲\n\nLanded on: ${res.tile?.name}\nGo back ${tileData.move_back} spaces!`);
+        pollGameState();
+    } else if (tileData?.move_forward) {
+        alert(`Rolled: ${res.roll}! 🎲\n\nLanded on: ${res.tile?.name}\nMove forward ${tileData.move_forward} spaces!`);
+        pollGameState();
+    } else if (tileData?.endgame) {
+        alert(`Rolled: ${res.roll}! 🎲\n\n🏆 You reached Laugh Tale! The endgame has been triggered!`);
+        pollGameState();
+    } else {
+        alert(`Rolled: ${res.roll}! 🎲\n\nLanded on: ${res.tile?.name || 'Unknown tile'}`);
+        pollGameState();
+    }
+}
+
+// Fallback mini-game (simple prompt-based)
+function simulateMiniGame(gameType, tileData) {
+    const target = Math.floor(Math.random() * 20) + 1;
+    const guess = prompt(`🎮 ${gameType.replace(/-/g, ' ').toUpperCase()}!\n\nGuess a number between 1 and 20:`);
+    const score = parseInt(guess) === target ? 100 : 0;
+    
+    apiFetch('/boardwar/minigame-result', {
+        method: 'POST',
+        body: JSON.stringify({ warId: currentWarId, gameType, score })
+    }).then(res => {
+        alert(res?.won ? `🎉 You won! +${res.beliEarned} Beli, +${res.starsEarned} Stars` : '😢 You lost! Better luck next time.');
+        pollGameState();
+    });
+}
+
+// Listen for mini-game results from iframe
+window.addEventListener('message', async (e) => {
+    if (e.data?.game && e.data?.score !== undefined) {
+        const res = await apiFetch('/boardwar/minigame-result', {
+            method: 'POST',
+            body: JSON.stringify({ warId: currentWarId, gameType: e.data.game, score: e.data.score })
+        });
+        document.getElementById('miniGameOverlay').classList.add('hidden');
+        document.getElementById('miniGameFrame').src = '';
+        alert(res?.won ? `🎉 You won! +${res.beliEarned} Beli, +${res.starsEarned} Stars` : '😢 You lost! Better luck next time.');
+        pollGameState();
+    }
+});
+
+function closeMiniGame() {
+    document.getElementById('miniGameOverlay').classList.add('hidden');
+    document.getElementById('miniGameFrame').src = '';
+}
+
+// Cleanup polling when leaving board war page
+window.addEventListener('beforeunload', () => {
+    if (pollInterval) clearInterval(pollInterval);
 });
