@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sword Clash</title>
+    <style>
+        body { margin: 0; background: #0b0e1e; display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial; }
+        .container { text-align: center; }
+        .clash-btn { padding: 20px 40px; font-size: 24px; background: #ef4444; color: white; border: none; border-radius: 12px; cursor: pointer; }
+        .clash-btn:active { background: #dc2626; }
+        .score { color: white; font-size: 48px; margin: 20px; }
+        .timer { color: #f59e0b; font-size: 24px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="timer" id="timer">10</div>
+        <div class="score" id="score">0</div>
+        <button class="clash-btn" id="clashBtn">⚔️ CLASH!</button>
+    </div>
+    <script>
+        let score = 0;
+        let timeLeft = 10;
+        let gameOver = false;
+        
+        document.getElementById('clashBtn').addEventListener('click', () => {
+            if (gameOver) return;
+            score += 10;
+            document.getElementById('score').textContent = score;
+        });
+        
+        const interval = setInterval(() => {
+            if (gameOver) return;
+            timeLeft--;
+            document.getElementById('timer').textContent = timeLeft;
+            if (timeLeft <= 0) {
+                gameOver = true;
+                document.getElementById('clashBtn').disabled = true;
+                window.parent.postMessage({ game: 'sword_clash', score }, '*');
+                clearInterval(interval);
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
