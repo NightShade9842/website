@@ -2,7 +2,6 @@
 const mysql = require('mysql2/promise');
 const jwt = require('jsonwebtoken');
 
-// ── Database pool ──
 let pool;
 function getPool() {
     if (!pool) {
@@ -229,7 +228,7 @@ module.exports = async (req, res) => {
             }
         }
 
-        // ── Item Store (Beli / Gems) ──
+        // Item Store (Beli / Gems)
         if (path === '/store/items' && req.method === 'GET') {
             const [items] = await db.execute(
                 'SELECT * FROM store_items WHERE (price_gems > 0 OR price_beli > 0) AND (stock > 0 OR stock = -1)'
@@ -275,7 +274,7 @@ module.exports = async (req, res) => {
             }
         }
 
-        // ── PokéMart (Beli) ──
+        // PokéMart (Beli)
         if (path === '/store/pokemart' && req.method === 'GET') {
             const [items] = await db.execute('SELECT * FROM pokemon_shop ORDER BY id');
             return res.json(items);
@@ -308,7 +307,7 @@ module.exports = async (req, res) => {
             }
         }
 
-        // ── Guild Store (Dust) ──
+        // Guild Store (Dust)
         if (path === '/store/guild' && req.method === 'GET') {
             const [items] = await db.execute('SELECT * FROM guild_store_items ORDER BY id');
             return res.json(items);
@@ -323,11 +322,10 @@ module.exports = async (req, res) => {
                 const [[item]] = await conn.execute('SELECT * FROM guild_store_items WHERE id = ? FOR UPDATE', [itemId]);
                 if (!item) throw new Error('Item not found');
 
-                // Check guild membership and dust balance
                 const [[player]] = await conn.execute(
                     'SELECT guild_id, dust FROM players WHERE user_id = ? FOR UPDATE', [userId]
                 );
-                if (!player || !player.guild_id) throw new Error('You must be in a guild to buy from the Guild Store');
+                if (!player || !player.guild_id) throw new Error('You must be in a guild');
                 if (player.dust < item.price_dust) throw new Error('Not enough Dust');
 
                 await conn.execute('UPDATE players SET dust = dust - ? WHERE user_id = ?', [item.price_dust, userId]);
@@ -345,7 +343,7 @@ module.exports = async (req, res) => {
             }
         }
 
-        // ── Hatchery (Beli / Gems) ──
+        // Hatchery (Beli / Gems)
         if (path === '/store/hatchery' && req.method === 'GET') {
             const [items] = await db.execute('SELECT * FROM hatchery_items ORDER BY id');
             return res.json(items);
@@ -373,7 +371,6 @@ module.exports = async (req, res) => {
                 }
                 if (!paid) throw new Error('Not enough gems or beli');
 
-                // Add egg to inventory
                 await conn.execute(
                     'INSERT INTO inventory (owner_id, item_name, item_type, quantity) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE quantity = quantity + ?',
                     [userId, item.name, 'egg', item.pokemon_count, item.pokemon_count]
@@ -386,6 +383,147 @@ module.exports = async (req, res) => {
             } finally {
                 conn.release();
             }
+        }
+
+        // ── BOARD WAR ──
+
+        if (path === '/boardwar/list' && req.method === 'GET') {
+            const [wars] = await db.execute(`
+                SELECT w.*, 
+                       (SELECT COUNT(*) FROM board_war_sessions WHERE war_id = w.id) as player_count
+                FROM guild_wars w
+                WHERE w.war_type = 'board_war' AND w.status IN ('pending','active')
+                ORDER BY w.created_at DESC
+            `);
+            return res.json(wars);
+        }
+
+        if (path === '/boardwar/create' && req.method === 'POST') {
+            const { name, maxPlayers } = req.body || {};
+            if (!name || !maxPlayers) return res.status(400).json({ error: 'Missing fields' });
+
+            const [[player]] = await db.execute('SELECT guild_id FROM players WHERE user_id = ?', [userId]);
+            if (!player?.guild_id) return res.status(400).json({ error: 'Must be in a guild' });
+
+            const [[guild]] = await db.execute('SELECT leader_id FROM guilds WHERE id = ?', [player.guild_id]);
+            if (!guild || guild.leader_id !== userId) return res.status(400).json({ error: 'Only guild leader can create a war' });
+
+            const startTime = new Date();
+            const endTime = new Date(startTime.getTime() + 72 * 3600000);
+
+            const [result] = await db.execute(
+                "INSERT INTO guild_wars (name, created_by, max_guilds, start_time, end_time, battle_types, war_type, status) VALUES (?, ?, ?, ?, ?, 'board_war', 'board_war', 'pending')",
+                [name, userId, maxPlayers, startTime, endTime]
+            );
+            return res.json({ success: true, warId: result.insertId });
+        }
+
+        if (path === '/boardwar/join' && req.method === 'POST') {
+            const { warId, captain } = req.body || {};
+            if (!warId || !captain) return res.status(400).json({ error: 'Missing fields' });
+
+            const [[player]] = await db.execute('SELECT guild_id FROM players WHERE user_id = ?', [userId]);
+            if (!player?.guild_id) return res.status(400).json({ error: 'Must be in a guild' });
+
+            const [[war]] = await db.execute('SELECT * FROM guild_wars WHERE id = ? AND status = "pending" AND war_type = "board_war"', [warId]);
+            if (!war) return res.status(400).json({ error: 'War not available' });
+
+            const [[{ count }]] = await db.execute('SELECT COUNT(*) as count FROM board_war_sessions WHERE war_id = ?', [warId]);
+            if (count >= war.max_guilds) return res.status(400).json({ error: 'War is full' });
+
+            await db.execute(
+                'INSERT INTO board_war_sessions (war_id, guild_id, captain, turn_order) VALUES (?, ?, ?, ?)',
+                [warId, player.guild_id, captain, count + 1]
+            );
+
+            if (count + 1 >= war.max_guilds) {
+                await db.execute("UPDATE guild_wars SET status = 'active' WHERE id = ?", [warId]);
+                await db.execute('UPDATE board_war_sessions SET is_current_turn = 1 WHERE war_id = ? AND turn_order = 1', [warId]);
+            }
+
+            return res.json({ success: true });
+        }
+
+        if (path.startsWith('/boardwar/state/') && req.method === 'GET') {
+            const warId = path.split('/boardwar/state/')[1];
+            const [sessions] = await db.execute(`
+                SELECT bws.*, g.name as guild_name, g.leader_id,
+                       p.pirate_name as leader_name
+                FROM board_war_sessions bws
+                JOIN guilds g ON bws.guild_id = g.id
+                LEFT JOIN players p ON g.leader_id = p.user_id
+                WHERE bws.war_id = ?
+                ORDER BY bws.stars DESC, bws.beli DESC
+            `, [warId]);
+
+            const [tiles] = await db.execute('SELECT * FROM board_tiles ORDER BY position');
+            const [[war]] = await db.execute('SELECT * FROM guild_wars WHERE id = ?', [warId]);
+
+            const [[player]] = await db.execute('SELECT guild_id FROM players WHERE user_id = ?', [userId]);
+            const yourTurn = sessions.find(s => s.is_current_turn && s.guild_id === player?.guild_id);
+
+            return res.json({ sessions, tiles, war, yourTurn: !!yourTurn });
+        }
+
+        if (path === '/boardwar/roll' && req.method === 'POST') {
+            const { warId } = req.body || {};
+            if (!warId) return res.status(400).json({ error: 'Missing warId' });
+
+            const [[player]] = await db.execute('SELECT guild_id FROM players WHERE user_id = ?', [userId]);
+            if (!player?.guild_id) return res.status(400).json({ error: 'Not in a guild' });
+
+            const [[session]] = await db.execute('SELECT * FROM board_war_sessions WHERE war_id = ? AND guild_id = ?', [warId, player.guild_id]);
+            if (!session || !session.is_current_turn) return res.status(400).json({ error: 'Not your turn' });
+
+            const roll = Math.floor(Math.random() * 6) + 1;
+            const newPosition = session.position + roll;
+
+            await db.execute(
+                'UPDATE board_war_sessions SET last_roll = ?, position = ? WHERE war_id = ? AND guild_id = ?',
+                [roll, newPosition, warId, player.guild_id]
+            );
+
+            const tileIndex = newPosition % 45;
+            const [[tile]] = await db.execute('SELECT * FROM board_tiles WHERE position = ?', [tileIndex]);
+
+            // Pass turn
+            await db.execute('UPDATE board_war_sessions SET is_current_turn = 0 WHERE war_id = ?', [warId]);
+            const [[{ maxOrder }]] = await db.execute('SELECT MAX(turn_order) as maxOrder FROM board_war_sessions WHERE war_id = ?', [warId]);
+            const nextOrder = (session.turn_order % maxOrder) + 1;
+            await db.execute('UPDATE board_war_sessions SET is_current_turn = 1 WHERE war_id = ? AND turn_order = ?', [warId, nextOrder]);
+
+            return res.json({ roll, position: newPosition, tile });
+        }
+
+        if (path === '/boardwar/minigame-result' && req.method === 'POST') {
+            const { warId, gameType, score } = req.body || {};
+            if (!warId || !gameType || score === undefined) return res.status(400).json({ error: 'Missing fields' });
+
+            const [[player]] = await db.execute('SELECT guild_id FROM players WHERE user_id = ?', [userId]);
+            if (!player?.guild_id) return res.status(400).json({ error: 'Not in a guild' });
+
+            const won = score > 0;
+            const beliEarned = won ? Math.floor(Math.random() * 500) + 300 : 0;
+            const starsEarned = won ? 1 : 0;
+
+            if (won) {
+                await db.execute(
+                    'UPDATE board_war_sessions SET beli = beli + ?, stars = stars + ?, mini_games_won = mini_games_won + 1, mini_games_played = mini_games_played + 1 WHERE war_id = ? AND guild_id = ?',
+                    [beliEarned, starsEarned, warId, player.guild_id]
+                );
+            } else {
+                await db.execute(
+                    'UPDATE board_war_sessions SET mini_games_played = mini_games_played + 1 WHERE war_id = ? AND guild_id = ?',
+                    [warId, player.guild_id]
+                );
+            }
+
+            await db.execute(
+                'INSERT INTO board_war_battles (session_id, war_id, winner_guild_id, loser_guild_id, game_type, winner_score, beli_earned, stars_earned) VALUES ((SELECT id FROM board_war_sessions WHERE war_id = ? AND guild_id = ?), ?, ?, NULL, ?, ?, ?, ?)',
+                [warId, player.guild_id, warId, won ? player.guild_id : 0, gameType, score, beliEarned, starsEarned]
+            );
+
+            return res.json({ won, beliEarned, starsEarned });
         }
 
         // Leaderboard
