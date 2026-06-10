@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grand Line Board War - SABAODY</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pirata+One&display=swap" rel="stylesheet">
+    <style>
+        .pirate { font-family: 'Pirata One', cursive; }
+        body { background: #0b0e1e; color: #e2e8f0; }
+        .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .board-tile { width: 60px; height: 60px; border: 2px solid #334155; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .tile-island { background: #22c55e33; }
+        .tile-marine { background: #ef444433; }
+        .tile-treasure { background: #f59e0b33; }
+        .tile-yonko { background: #ec489933; }
+        .tile-thriller { background: #8b5cf633; }
+        .tile-weather { background: #3b82f633; }
+        .tile-poseidon { background: #06b6d433; }
+        .tile-calm { background: #94a3b833; }
+        .tile-start { background: #22c55e66; }
+        .tile-raftel { background: #f59e0b66; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+        .player-token { position: absolute; width: 30px; height: 30px; border-radius: 50%; border: 2px solid white; font-size: 12px; display: flex; align-items: center; justify-content: center; font-weight: bold; z-index: 10; }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <nav class="glass rounded-2xl p-4 mb-8 flex justify-between items-center">
+        <h1 class="text-3xl pirate gold-text">⚓ SABAODY</h1>
+        <div class="space-x-4">
+            <a href="profile.html" class="text-gray-300 hover:text-yellow-400">Profile</a>
+            <a href="cards.html" class="text-gray-300 hover:text-yellow-400">Cards</a>
+            <a href="store.html" class="text-gray-300 hover:text-yellow-400">Store</a>
+            <a href="leaderboard.html" class="text-gray-300 hover:text-yellow-400">Leaderboard</a>
+            <a href="boardwar.html" class="text-yellow-400 font-semibold">Board War</a>
+            <button onclick="logout()" class="bg-red-500 px-4 py-2 rounded-xl text-white">Logout</button>
+        </div>
+    </nav>
+
+    <div class="glass rounded-2xl p-6">
+        <div class="flex space-x-4 mb-6">
+            <button onclick="switchBoardTab('lobby')" class="tab-btn tab-active" id="tab-lobby">🏴‍☠️ Lobby</button>
+            <button onclick="switchBoardTab('create')" class="tab-btn" id="tab-create">🆕 Create War</button>
+        </div>
+        <div id="board-content"></div>
+    </div>
+
+    <!-- Mini-game iframe (hidden by default) -->
+    <div id="miniGameOverlay" class="hidden fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+        <div class="glass rounded-2xl p-4 w-full max-w-2xl">
+            <iframe id="miniGameFrame" class="w-full h-96 rounded-xl"></iframe>
+            <button onclick="closeMiniGame()" class="mt-4 bg-red-500 px-4 py-2 rounded-xl text-white">Close</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        let currentBoardTab = 'lobby';
+        
+        function switchBoardTab(tab) {
+            currentBoardTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+            document.getElementById('tab-' + tab).classList.add('tab-active');
+            loadBoardContent();
+        }
+        
+        async function loadBoardContent() {
+            const container = document.getElementById('board-content');
+            if (currentBoardTab === 'lobby') await loadLobby(container);
+            else if (currentBoardTab === 'create') showCreateWarForm(container);
+        }
+        
+        async function loadLobby(container) {
+            const wars = await apiFetch('/boardwar/list');
+            if (!wars?.length) {
+                container.innerHTML = '<p class="text-gray-400">No active board wars. Create one!</p>';
+                return;
+            }
+            container.innerHTML = wars.map(w => `
+                <div class="glass rounded-xl p-4 mb-3 flex justify-between items-center">
+                    <div>
+                        <p class="font-bold">${w.name}</p>
+                        <p class="text-sm text-gray-400">Players: ${w.player_count}/${w.max_guilds}</p>
+                        <p class="text-sm text-gray-400">Status: ${w.status}</p>
+                    </div>
+                    <div>
+                        ${w.status === 'pending' ? `<button onclick="joinBoardWar(${w.id})" class="bg-blue-500 px-4 py-2 rounded-lg text-white">Join</button>` : ''}
+                        ${w.status === 'active' ? `<button onclick="viewBoardWar(${w.id})" class="bg-yellow-500 px-4 py-2 rounded-lg text-black">Enter</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function showCreateWarForm(container) {
+            container.innerHTML = `
+                <div class="max-w-md mx-auto">
+                    <h3 class="text-xl font-bold mb-4">Create Board War</h3>
+                    <input type="text" id="warName" placeholder="War Name" class="w-full bg-gray-800 rounded-xl px-4 py-3 mb-4 text-white border border-gray-600">
+                    <select id="maxPlayers" class="w-full bg-gray-800 rounded-xl px-4 py-3 mb-4 text-white border border-gray-600">
+                        <option value="2">2 Players</option>
+                        <option value="3">3 Players</option>
+                        <option value="4">4 Players</option>
+                    </select>
+                    <button onclick="createBoardWar()" class="w-full bg-yellow-500 py-3 rounded-xl text-black font-bold">Create War</button>
+                </div>
+            `;
+        }
+        
+        async function createBoardWar() {
+            const name = document.getElementById('warName').value;
+            const maxPlayers = parseInt(document.getElementById('maxPlayers').value);
+            if (!name) return alert('Enter war name');
+            const res = await apiFetch('/boardwar/create', {
+                method: 'POST',
+                body: JSON.stringify({ name, maxPlayers })
+            });
+            if (res?.success) {
+                alert('War created!');
+                switchBoardTab('lobby');
+            } else {
+                alert(res?.error || 'Failed');
+            }
+        }
+        
+        async function joinBoardWar(warId) {
+            const captain = prompt('Choose your captain: luffy, zoro, nami, sanji, robin');
+            if (!captain) return;
+            const res = await apiFetch('/boardwar/join', {
+                method: 'POST',
+                body: JSON.stringify({ warId, captain })
+            });
+            if (res?.success) {
+                alert('Joined!');
+                switchBoardTab('lobby');
+            } else {
+                alert(res?.error || 'Failed');
+            }
+        }
+        
+        let currentWarId = null;
+        let pollInterval = null;
+        
+        async function viewBoardWar(warId) {
+            currentWarId = warId;
+            document.getElementById('board-content').innerHTML = '<p class="text-yellow-400">Loading board...</p>';
+            pollGameState();
+            pollInterval = setInterval(pollGameState, 5000);
+        }
+        
+        async function pollGameState() {
+            if (!currentWarId) return;
+            const data = await apiFetch('/boardwar/state/' + currentWarId);
+            if (!data) return;
+            renderBoard(data);
+        }
+        
+        function renderBoard(data) {
+            const { sessions, tiles, war } = data;
+            const container = document.getElementById('board-content');
+            
+            let html = '<h2 class="text-2xl pirate mb-4">' + war.name + '</h2>';
+            
+            // Board
+            html += '<div class="grid grid-cols-9 gap-1 mb-6 relative">';
+            tiles.forEach((tile, index) => {
+                html += `<div class="board-tile tile-${tile.tile_type} relative" title="${tile.name}: ${tile.description}">`;
+                html += `${tile.tile_type === 'start' ? '🏁' : tile.tile_type === 'raftel' ? '👑' : tile.tile_type === 'island' ? '🏝️' : tile.tile_type === 'marine' ? '⚓' : tile.tile_type === 'treasure' ? '💰' : tile.tile_type === 'yonko' ? '🐉' : tile.tile_type === 'thriller' ? '💀' : '🌀'}`;
+                
+                // Player tokens
+                sessions.forEach((s, i) => {
+                    if (s.position % 45 === index) {
+                        html += `<div class="player-token" style="background: ${['#ef4444','#3b82f6','#22c55e','#f59e0b'][i]}; top: -10px; right: -10px;">${['L','Z','N','S'][i] || 'P'}</div>`;
+                    }
+                });
+                
+                html += '</div>';
+            });
+            html += '</div>';
+            
+            // Player stats
+            html += '<div class="grid grid-cols-2 gap-4">';
+            sessions.forEach((s, i) => {
+                html += `
+                    <div class="glass rounded-xl p-4">
+                        <p class="font-bold">${['🔴','🔵','🟢','🟡'][i]} ${s.guild_name}</p>
+                        <p class="text-sm">Captain: ${s.captain}</p>
+                        <p class="text-yellow-400">⭐ ${s.stars} Stars</p>
+                        <p class="text-blue-400">💰 ${s.beli} Beli</p>
+                        <p class="text-gray-400">📍 Position: ${s.position}</p>
+                        ${s.is_current_turn ? '<p class="text-green-400 font-bold">▶ YOUR TURN</p>' : ''}
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            // Roll button
+            const mySession = sessions.find(s => s.is_current_turn);
+            if (mySession) {
+                html += `<button onclick="rollDice()" class="mt-4 bg-yellow-500 px-6 py-3 rounded-xl text-black font-bold text-xl">🎲 Roll Dice</button>`;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        async function rollDice() {
+            if (!currentWarId) return;
+            const res = await apiFetch('/boardwar/roll', {
+                method: 'POST',
+                body: JSON.stringify({ warId: currentWarId })
+            });
+            if (!res) return;
+            
+            if (res.tile?.data?.mini_game) {
+                // Launch mini-game
+                openMiniGame(res.tile.data.mini_game);
+            } else {
+                alert(`Rolled ${res.roll}! Landed on: ${res.tile?.name || 'Unknown tile'}`);
+                pollGameState();
+            }
+        }
+        
+        function openMiniGame(gameType) {
+            document.getElementById('miniGameOverlay').classList.remove('hidden');
+            document.getElementById('miniGameFrame').src = `/mini-games/${gameType.replace(/_/g, '-')}.html`;
+        }
+        
+        function closeMiniGame() {
+            document.getElementById('miniGameOverlay').classList.add('hidden');
+            document.getElementById('miniGameFrame').src = '';
+        }
+        
+        // Listen for mini-game results
+        window.addEventListener('message', async (e) => {
+            if (e.data.game && e.data.score !== undefined) {
+                const res = await apiFetch('/boardwar/minigame-result', {
+                    method: 'POST',
+                    body: JSON.stringify({ warId: currentWarId, gameType: e.data.game, score: e.data.score })
+                });
+                closeMiniGame();
+                alert(res?.won ? `You won! +${res.beliEarned} Beli, +${res.starsEarned} Stars` : 'You lost!');
+                pollGameState();
+            }
+        });
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!localStorage.getItem('sabaody_token')) window.location = 'index.html';
+            loadBoardContent();
+        });
+    </script>
+</body>
+</html>
