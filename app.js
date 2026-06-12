@@ -108,7 +108,7 @@ async function loadProfile() {
     }
 }
 
-// ===== CARDS =====
+// ===== CARDS COLLECTION =====
 async function loadCards() {
     const user = JSON.parse(localStorage.getItem('sabaody_user'));
     if (!user) return;
@@ -328,63 +328,26 @@ async function pollDuel() {
     renderBattlefield(data.duel);
 }
 
-function renderCardSlot(card, type, index) {
-    if (!card) return `<div class="card-slot empty flex items-center justify-center"><span class="text-gray-600 text-xs">Slot ${index+1}</span></div>`;
-    if (card.faceDown) return `<div class="card-slot face-down flex items-center justify-center"><span class="text-4xl">🂠</span></div>`;
-
-    const cardName = card.name || 'Card';
-    const position = card.position || 'atk';
-    const posClass = position === 'atk' ? 'pos-atk' : 'pos-def';
-    const posLabel = position.toUpperCase();
-    const typeClass = type === 'player' ? 'player-card glow-green' : type === 'opponent' ? 'opponent-card' : 'hand-card';
-
-    // Use API proxy for card images
-    const imgSrc = card.img ? `/api/card-image?url=${encodeURIComponent(card.img)}` : '';
-
-    return `<div class="card-slot ${typeClass}">
-        ${imgSrc ? `<img src="${imgSrc}" alt="${cardName}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">` : ''}
-        <div class="${imgSrc ? 'hidden' : ''} absolute inset-0 bg-gradient-to-b from-blue-900 to-blue-950 flex flex-col items-center justify-center p-1">
-            <span class="text-xs font-bold text-center">${cardName.substring(0,10)}</span>
-            <span class="text-yellow-400 text-xs mt-1">⚔️${card.attack}</span>
-            <span class="text-blue-400 text-xs">🛡️${card.defense}</span>
-        </div>
-        <div class="card-stats"><div class="card-name text-white">${cardName.substring(0,12)}</div><div class="flex justify-center gap-2 text-xs"><span class="text-yellow-300">⚔️${card.attack}</span><span class="text-blue-300">🛡️${card.defense}</span></div></div>
-        ${type !== 'hand' ? `<div class="card-position ${posClass}">${posLabel}</div>` : ''}
-        ${type === 'player' && index !== undefined ? `<div class="absolute top-1 left-1 bg-yellow-500 text-black rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold z-10">${index+1}</div>` : ''}
-    </div>`;
-}
-
-function renderBattlefield(duel) {
-    const container = document.getElementById('duel-content');
-    if (!container) return;
-    currentDuelData = duel;
-    const hpPercent = (hp) => Math.max(0, Math.min(100, (hp / 4000) * 100));
-    const hpColor = (hp) => hp < 1000 ? 'bg-red-500' : 'bg-green-500';
-    let html = `<div class="text-center mb-6"><div class="flex justify-center items-center gap-3 mb-2 flex-wrap text-sm"><span class="text-gray-400">Turn ${duel.turnCount}</span><span class="bg-gray-700 px-3 py-1 rounded-full text-xs">${duel.phase.toUpperCase()}</span><span class="text-gray-400">🃏${duel.playerDeckCount} 💀${duel.playerGrave}</span></div>${duel.isMyTurn ? '<p class="text-green-400 font-bold text-lg pulse">▶ YOUR TURN</p>' : '<p class="text-yellow-400 text-lg">⏳ Waiting...</p>'}</div>
-    <div class="mb-6"><div class="flex justify-between items-center mb-2"><p class="font-bold text-lg">👤 ${duel.opponent}</p><p class="font-bold">❤️ ${duel.opponentHP} / 4000</p></div><div class="hp-bar-bg mb-4"><div class="hp-bar ${hpColor(duel.opponentHP)}" style="width:${hpPercent(duel.opponentHP)}%"></div></div><div class="flex gap-2 justify-center flex-wrap">`;
-    for (let i = 0; i < 5; i++) html += renderCardSlot(duel.opponentField?.[i], 'opponent', i);
-    html += `</div></div><div class="text-center py-4 border-y border-gray-700 my-6"><p class="text-yellow-400 text-xl pirate">⚔️ BATTLEFIELD ⚔️</p>${duel.lastAction ? `<p class="text-sm text-gray-200 mt-2 bg-gray-800 rounded-lg px-4 py-2 inline-block">${duel.lastAction}</p>` : ''}</div>
-    <div class="mb-6"><div class="flex gap-2 justify-center flex-wrap mb-4">`;
-    for (let i = 0; i < 5; i++) html += renderCardSlot(duel.playerField?.[i], 'player', i);
-    html += `</div><div class="flex justify-between items-center mb-2"><p class="font-bold text-lg">👤 You</p><p class="font-bold">❤️ ${duel.playerHP} / 4000</p></div><div class="hp-bar-bg"><div class="hp-bar ${hpColor(duel.playerHP)}" style="width:${hpPercent(duel.playerHP)}%"></div></div></div>
-    <div class="mb-6"><p class="text-sm text-gray-400 mb-3">🃏 Your Hand (${duel.playerHand?.length||0} cards)</p><div class="flex gap-2 flex-wrap justify-center">`;
-    if (duel.playerHand?.length) { duel.playerHand.forEach((c, i) => html += renderCardSlot(c, 'hand', i)); }
-    else html += '<p class="text-gray-500 text-sm">No cards in hand</p>';
-    html += `</div></div>`;
-    if (duel.isMyTurn) {
-        html += `<div class="flex gap-2 justify-center flex-wrap mt-6 pt-4 border-t border-gray-700">`;
-        if (duel.phase === 'draw') html += `<button onclick="duelAction('draw')" class="btn btn-blue">📥 Draw</button>`;
-        html += `<button onclick="duelAction('summon')" class="btn btn-gold">⚔️ Summon</button><button onclick="duelAction('attack')" class="btn btn-red">💥 Attack</button><button onclick="duelAction('set')" class="btn btn-purple">🛡️ Set</button><button onclick="duelAction('endturn')" class="btn btn-green">🏁 End Turn</button></div>`;
-    }
-    html += `<div class="text-center mt-6"><button onclick="duelAction('surrender')" class="bg-gray-700 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition">🏳️ Surrender</button></div>`;
-    container.innerHTML = html;
-}
+// renderCardSlot is defined in duels.html, not needed here (but we keep a stub just in case)
+// The actual rendering is in duels.html inline script, this is only for reference.
+// We'll leave the duel action function which is used by duels.html.
 
 async function duelAction(action) {
     let body = {};
-    if (action === 'summon') { const slot = prompt('Hand slot? (1-'+(currentDuelData?.playerHand?.length||7)+'):'); if (!slot||isNaN(slot)) return; const pos = prompt('Position? (atk/def):','atk'); if (!pos||!['atk','def'].includes(pos.toLowerCase())) return alert('Use atk or def'); body = { handSlot: parseInt(slot)-1, position: pos.toLowerCase() }; }
-    else if (action === 'attack') { const slot = prompt('Your monster slot? (1-5):'); if (!slot||isNaN(slot)) return; const target = prompt('Target slot? (1-5, blank for direct):'); body = { fieldSlot: parseInt(slot)-1 }; if (target&&!isNaN(target)) body.targetSlot = parseInt(target)-1; }
-    else if (action === 'set') { const slot = prompt('Hand slot? (1-'+(currentDuelData?.playerHand?.length||7)+'):'); if (!slot||isNaN(slot)) return; body = { handSlot: parseInt(slot)-1 }; }
+    if (action === 'summon') {
+        const maxSlot = currentDuelData?.playerHand?.length || 7;
+        const slot = prompt(`Hand slot? (1-${maxSlot}):`); if (!slot||isNaN(slot)) return;
+        const pos = prompt('Position? (atk/def):','atk'); if (!pos||!['atk','def'].includes(pos.toLowerCase())) return alert('Use atk or def');
+        body = { handSlot: parseInt(slot)-1, position: pos.toLowerCase() };
+    } else if (action === 'attack') {
+        const slot = prompt('Your monster slot? (1-5):'); if (!slot||isNaN(slot)) return;
+        const target = prompt('Target slot? (1-5, blank for direct):');
+        body = { fieldSlot: parseInt(slot)-1 }; if (target&&!isNaN(target)) body.targetSlot = parseInt(target)-1;
+    } else if (action === 'set') {
+        const maxSlot = currentDuelData?.playerHand?.length || 7;
+        const slot = prompt(`Hand slot? (1-${maxSlot}):`); if (!slot||isNaN(slot)) return;
+        body = { handSlot: parseInt(slot)-1 };
+    }
     const endpoints = { draw:'/duel/draw', summon:'/duel/summon', attack:'/duel/attack', set:'/duel/set', endturn:'/duel/endturn', surrender:'/duel/surrender' };
     const res = await apiFetch(endpoints[action], { method:'POST', body:JSON.stringify(body) });
     if (res?.success) { if (res.result?.gameOver) alert('🏆 VICTORY! +1000฿ +50 XP'); await pollDuel(); }
