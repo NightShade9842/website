@@ -11,10 +11,7 @@
         body { background: #0b0e1e; color: #e2e8f0; }
         .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
         .gold-text { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .tab-btn { padding: 0.5rem 1rem; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s; }
-        .tab-active { background: #f59e0b; color: black; font-weight: bold; }
         
-        /* Card Slots */
         .card-slot { width: 100px; height: 140px; border-radius: 10px; position: relative; overflow: hidden; transition: all 0.3s; }
         .card-slot img { width: 100%; height: 100%; object-fit: cover; }
         .card-slot.player-card { border: 3px solid #22c55e; box-shadow: 0 0 15px rgba(34,197,94,0.3); }
@@ -24,18 +21,15 @@
         .card-slot.hand-card { border: 2px solid #f59e0b; cursor: pointer; }
         .card-slot.hand-card:hover { border-color: #fff; transform: translateY(-8px); box-shadow: 0 10px 25px rgba(245,158,11,0.4); z-index: 20; }
         
-        /* Card Stats Overlay */
-        .card-stats { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding: 4px 6px 6px; }
+        .card-stats { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.95)); padding: 4px 6px 6px; }
         .card-name { font-size: 10px; font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-position { position: absolute; top: 4px; right: 4px; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         .pos-atk { background: #ef4444; color: white; }
         .pos-def { background: #3b82f6; color: white; }
         
-        /* HP Bars */
         .hp-bar { height: 18px; border-radius: 9px; transition: width 0.6s ease; }
         .hp-bar-bg { background: #1f2937; border-radius: 9px; overflow: hidden; }
         
-        /* Buttons */
         .btn { padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: bold; cursor: pointer; transition: all 0.2s; border: none; font-size: 14px; }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .btn-gold { background: #f59e0b; color: black; }
@@ -49,7 +43,6 @@
         .btn-purple { background: #8b5cf6; color: white; }
         .btn-purple:hover:not(:disabled) { background: #a78bfa; transform: translateY(-2px); }
         
-        /* Animations */
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .pulse { animation: pulse 1.5s infinite; }
         @keyframes glow { 0%, 100% { box-shadow: 0 0 10px rgba(34,197,94,0.3); } 50% { box-shadow: 0 0 25px rgba(34,197,94,0.6); } }
@@ -58,14 +51,12 @@
         .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #f59e0b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0b0e1e; }
         ::-webkit-scrollbar-thumb { background: #f59e0b; border-radius: 3px; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-6">
-    <!-- Navigation -->
     <nav class="glass rounded-2xl p-4 mb-6 flex justify-between items-center flex-wrap gap-2">
         <h1 class="text-2xl md:text-3xl pirate gold-text">⚓ SABAODY</h1>
         <div class="space-x-1 md:space-x-3 text-sm md:text-base">
@@ -78,7 +69,6 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
     <div id="duel-content" class="glass rounded-2xl p-4 md:p-6 min-h-[500px]">
         <div class="flex items-center justify-center h-64">
             <div class="text-center">
@@ -116,9 +106,6 @@
             }
         }
 
-        // ═══════════════════════════════════
-        // LOBBY
-        // ═══════════════════════════════════
         async function loadLobby() {
             const container = document.getElementById('duel-content');
             const [pending, players, stats] = await Promise.all([
@@ -129,39 +116,31 @@
 
             let html = '<div class="grid grid-cols-1 md:grid-cols-3 gap-6">';
 
-            // Stats
             html += `<div class="glass rounded-xl p-5">
                 <h3 class="text-2xl pirate mb-4">📊 Your Stats</h3>
                 <div class="space-y-3 text-sm">
-                    <div class="flex justify-between"><span>⚔️ Total Duels</span><span class="font-bold">${stats?.total || 0}</span></div>
-                    <div class="flex justify-between"><span>🏆 Wins</span><span class="text-green-400 font-bold">${stats?.wins || 0}</span></div>
-                    <div class="flex justify-between"><span>💀 Losses</span><span class="text-red-400 font-bold">${stats?.losses || 0}</span></div>
-                    <div class="flex justify-between"><span>📈 Win Rate</span><span class="font-bold">${stats?.total ? Math.round((stats.wins / stats.total) * 100) : 0}%</span></div>
+                    <div class="flex justify-between"><span>⚔️ Total</span><span class="font-bold">${stats?.total||0}</span></div>
+                    <div class="flex justify-between"><span>🏆 Wins</span><span class="text-green-400 font-bold">${stats?.wins||0}</span></div>
+                    <div class="flex justify-between"><span>💀 Losses</span><span class="text-red-400 font-bold">${stats?.losses||0}</span></div>
+                    <div class="flex justify-between"><span>📈 Win Rate</span><span class="font-bold">${stats?.total?Math.round((stats.wins/stats.total)*100):0}%</span></div>
                 </div>
             </div>`;
 
-            // Pending
-            html += `<div class="glass rounded-xl p-5">
-                <h3 class="text-2xl pirate mb-4">📨 Challenges</h3>`;
+            html += `<div class="glass rounded-xl p-5"><h3 class="text-2xl pirate mb-4">📨 Challenges</h3>`;
             if (pending?.length) {
                 pending.forEach(d => {
                     html += `<div class="flex justify-between items-center bg-gray-800 rounded-lg p-3 mb-2">
-                        <div><p class="font-bold">${d.challenger_name}</p><p class="text-xs text-gray-400">Wants to duel!</p></div>
+                        <div><p class="font-bold">${d.challenger_name}</p></div>
                         <div class="space-x-1">
                             <button onclick="acceptDuel()" class="bg-green-500 text-black px-3 py-1 rounded text-sm font-bold hover:bg-green-400">✓</button>
                             <button onclick="declineDuel()" class="bg-red-500 text-white px-3 py-1 rounded text-sm font-bold hover:bg-red-400">✗</button>
                         </div>
                     </div>`;
                 });
-            } else {
-                html += '<p class="text-gray-400 text-center py-4">No pending challenges</p>';
-            }
+            } else { html += '<p class="text-gray-400 text-center py-4">No challenges</p>'; }
             html += '</div>';
 
-            // Players
-            html += `<div class="glass rounded-xl p-5">
-                <h3 class="text-2xl pirate mb-4">🏴‍☠️ Challenge</h3>
-                <div class="space-y-2 max-h-64 overflow-y-auto">`;
+            html += `<div class="glass rounded-xl p-5"><h3 class="text-2xl pirate mb-4">🏴‍☠️ Challenge</h3><div class="space-y-2 max-h-64 overflow-y-auto">`;
             if (players?.length) {
                 players.forEach(p => {
                     html += `<div class="flex justify-between items-center bg-gray-800 rounded-lg p-3">
@@ -169,24 +148,21 @@
                         <button onclick="challengePlayer('${p.user_id}')" class="bg-yellow-500 text-black px-4 py-1 rounded text-sm font-bold hover:bg-yellow-400">⚔️ Duel</button>
                     </div>`;
                 });
-            } else {
-                html += '<p class="text-gray-400 text-center py-4">No players available</p>';
-            }
-            html += '</div></div>';
+            } else { html += '<p class="text-gray-400 text-center py-4">No players</p>'; }
+            html += '</div></div></div>';
 
             container.innerHTML = html;
         }
 
         async function challengePlayer(opponentId) {
             const res = await apiFetch('/duel/challenge', { method: 'POST', body: JSON.stringify({ opponentId }) });
-            if (res?.success) { alert('⚔️ Challenge sent!'); loadDuelPage(); }
-            else alert(res?.error || 'Failed');
+            alert(res?.success ? '⚔️ Challenge sent!' : res?.error || 'Failed');
+            if (res?.success) loadDuelPage();
         }
 
         async function acceptDuel() {
             const res = await apiFetch('/duel/accept', { method: 'POST' });
-            if (res?.success) loadDuelPage();
-            else alert(res?.error);
+            if (res?.success) loadDuelPage(); else alert(res?.error);
         }
 
         async function declineDuel() {
@@ -194,33 +170,22 @@
             loadLobby();
         }
 
-        // ═══════════════════════════════════
-        // BATTLEFIELD
-        // ═══════════════════════════════════
         async function pollDuel() {
             const data = await apiFetch('/duel/active');
-            if (!data?.active) {
-                clearInterval(duelPollInterval);
-                alert('🏁 Duel ended!');
-                loadDuelPage();
-                return;
-            }
+            if (!data?.active) { clearInterval(duelPollInterval); alert('🏁 Duel ended!'); loadDuelPage(); return; }
             currentDuelData = data.duel;
             renderBattlefield(data.duel);
         }
 
         function renderCardSlot(card, type, index) {
             if (!card) {
-                return `<div class="card-slot empty flex items-center justify-center"><span class="text-gray-600 text-xs">${index !== undefined ? 'Slot '+(index+1) : ''}</span></div>`;
+                return `<div class="card-slot empty flex items-center justify-center"><span class="text-gray-600 text-xs">Slot ${index+1}</span></div>`;
             }
-            
             if (card.faceDown) {
-                return `<div class="card-slot face-down flex items-center justify-center">
-                    <span class="text-4xl">🂠</span>
-                </div>`;
+                return `<div class="card-slot face-down flex items-center justify-center"><span class="text-4xl">🂠</span></div>`;
             }
 
-            const imgSrc = card.img || '';
+            const imgSrc = card.img ? `/api/card-image?url=${encodeURIComponent(card.img)}` : '';
             const cardName = card.name || 'Card';
             const position = card.position || 'atk';
             const posClass = position === 'atk' ? 'pos-atk' : 'pos-def';
@@ -255,7 +220,6 @@
             const hpColor = (hp) => hp < 1000 ? 'bg-red-500' : 'bg-green-500';
 
             let html = `
-            <!-- Header -->
             <div class="text-center mb-6">
                 <div class="flex justify-center items-center gap-3 mb-2 flex-wrap text-sm">
                     <span class="text-gray-400">Turn ${duel.turnCount}</span>
@@ -265,7 +229,6 @@
                 ${duel.isMyTurn ? '<p class="text-green-400 font-bold text-lg pulse">▶ YOUR TURN</p>' : '<p class="text-yellow-400 text-lg">⏳ Waiting...</p>'}
             </div>
 
-            <!-- Opponent -->
             <div class="mb-6">
                 <div class="flex justify-between items-center mb-2">
                     <p class="font-bold text-lg">👤 ${duel.opponent}</p>
@@ -273,23 +236,17 @@
                 </div>
                 <div class="hp-bar-bg mb-4"><div class="hp-bar ${hpColor(duel.opponentHP)}" style="width:${hpPercent(duel.opponentHP)}%"></div></div>
                 <div class="flex gap-2 justify-center flex-wrap">`;
-            for (let i = 0; i < 5; i++) {
-                html += renderCardSlot(duel.opponentField?.[i], 'opponent', i);
-            }
+            for (let i = 0; i < 5; i++) html += renderCardSlot(duel.opponentField?.[i], 'opponent', i);
             html += `</div></div>
 
-            <!-- Battle Zone -->
             <div class="text-center py-4 border-y border-gray-700 my-6">
                 <p class="text-yellow-400 text-xl pirate">⚔️ BATTLEFIELD ⚔️</p>
                 ${duel.lastAction ? `<p class="text-sm text-gray-200 mt-2 bg-gray-800 rounded-lg px-4 py-2 inline-block">${duel.lastAction}</p>` : ''}
             </div>
 
-            <!-- Player Field -->
             <div class="mb-6">
                 <div class="flex gap-2 justify-center flex-wrap mb-4">`;
-            for (let i = 0; i < 5; i++) {
-                html += renderCardSlot(duel.playerField?.[i], 'player', i);
-            }
+            for (let i = 0; i < 5; i++) html += renderCardSlot(duel.playerField?.[i], 'player', i);
             html += `</div>
                 <div class="flex justify-between items-center mb-2">
                     <p class="font-bold text-lg">👤 You</p>
@@ -298,25 +255,19 @@
                 <div class="hp-bar-bg"><div class="hp-bar ${hpColor(duel.playerHP)}" style="width:${hpPercent(duel.playerHP)}%"></div></div>
             </div>
 
-            <!-- Hand -->
             <div class="mb-6">
                 <p class="text-sm text-gray-400 mb-3">🃏 Your Hand (${duel.playerHand?.length||0} cards)</p>
                 <div class="flex gap-2 flex-wrap justify-center">`;
             if (duel.playerHand?.length) {
-                duel.playerHand.forEach((c, i) => {
-                    html += renderCardSlot(c, 'hand', i);
-                });
+                duel.playerHand.forEach((c, i) => html += renderCardSlot(c, 'hand', i));
             } else {
                 html += '<p class="text-gray-500 text-sm">No cards in hand</p>';
             }
             html += `</div></div>`;
 
-            // Controls
             if (duel.isMyTurn) {
                 html += `<div class="flex gap-2 justify-center flex-wrap mt-6 pt-4 border-t border-gray-700">`;
-                if (duel.phase === 'draw') {
-                    html += `<button onclick="duelAction('draw')" class="btn btn-blue">📥 Draw</button>`;
-                }
+                if (duel.phase === 'draw') html += `<button onclick="duelAction('draw')" class="btn btn-blue">📥 Draw</button>`;
                 html += `<button onclick="duelAction('summon')" class="btn btn-gold">⚔️ Summon</button>
                     <button onclick="duelAction('attack')" class="btn btn-red">💥 Attack</button>
                     <button onclick="duelAction('set')" class="btn btn-purple">🛡️ Set</button>
@@ -330,45 +281,27 @@
             container.innerHTML = html;
         }
 
-        // ═══════════════════════════════════
-        // ACTIONS
-        // ═══════════════════════════════════
         async function duelAction(action) {
             let body = {};
-            
             if (action === 'summon') {
                 const maxSlot = currentDuelData?.playerHand?.length || 7;
-                const slot = prompt(`Which hand slot? (1-${maxSlot}):`);
-                if (!slot || isNaN(slot)) return;
-                const pos = prompt('Position? (atk / def):', 'atk');
-                if (!pos || !['atk', 'def'].includes(pos.toLowerCase())) return alert('Use atk or def');
-                body = { handSlot: parseInt(slot) - 1, position: pos.toLowerCase() };
+                const slot = prompt(`Hand slot? (1-${maxSlot}):`); if (!slot||isNaN(slot)) return;
+                const pos = prompt('Position? (atk/def):','atk'); if (!pos||!['atk','def'].includes(pos.toLowerCase())) return alert('Use atk or def');
+                body = { handSlot: parseInt(slot)-1, position: pos.toLowerCase() };
             } else if (action === 'attack') {
-                const slot = prompt('Which of YOUR monsters attacks? (field slot 1-5):');
-                if (!slot || isNaN(slot)) return;
-                const target = prompt('Target opponent slot? (1-5, leave blank for direct attack):');
-                body = { fieldSlot: parseInt(slot) - 1 };
-                if (target && !isNaN(target)) body.targetSlot = parseInt(target) - 1;
+                const slot = prompt('Your monster slot? (1-5):'); if (!slot||isNaN(slot)) return;
+                const target = prompt('Target slot? (1-5, blank for direct):');
+                body = { fieldSlot: parseInt(slot)-1 }; if (target&&!isNaN(target)) body.targetSlot = parseInt(target)-1;
             } else if (action === 'set') {
                 const maxSlot = currentDuelData?.playerHand?.length || 7;
-                const slot = prompt(`Which hand slot to set face-down? (1-${maxSlot}):`);
-                if (!slot || isNaN(slot)) return;
-                body = { handSlot: parseInt(slot) - 1 };
+                const slot = prompt(`Hand slot? (1-${maxSlot}):`); if (!slot||isNaN(slot)) return;
+                body = { handSlot: parseInt(slot)-1 };
             }
 
-            const endpoints = {
-                draw: '/duel/draw', summon: '/duel/summon', attack: '/duel/attack',
-                set: '/duel/set', endturn: '/duel/endturn', surrender: '/duel/surrender'
-            };
-
-            const res = await apiFetch(endpoints[action], { method: 'POST', body: JSON.stringify(body) });
-
-            if (res?.success) {
-                if (res.result?.gameOver) alert('🏆 VICTORY! You won!\n\n+1000฿ +50 XP');
-                await pollDuel();
-            } else if (res?.error) {
-                alert('❌ ' + res.error);
-            }
+            const endpoints = { draw:'/duel/draw', summon:'/duel/summon', attack:'/duel/attack', set:'/duel/set', endturn:'/duel/endturn', surrender:'/duel/surrender' };
+            const res = await apiFetch(endpoints[action], { method:'POST', body:JSON.stringify(body) });
+            if (res?.success) { if (res.result?.gameOver) alert('🏆 VICTORY! +1000฿ +50 XP'); await pollDuel(); }
+            else if (res?.error) alert('❌ '+res.error);
         }
     </script>
 </body>
