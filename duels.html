@@ -11,7 +11,7 @@
         body { background: #0b0e1e; color: #e2e8f0; }
         .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
         .gold-text { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        
+
         .card-slot { width: 100px; height: 140px; border-radius: 10px; position: relative; overflow: hidden; transition: all 0.3s; }
         .card-slot img { width: 100%; height: 100%; object-fit: cover; }
         .card-slot.player-card { border: 3px solid #22c55e; box-shadow: 0 0 15px rgba(34,197,94,0.3); }
@@ -20,16 +20,16 @@
         .card-slot.empty { border: 2px dashed #334155; background: rgba(0,0,0,0.2); }
         .card-slot.hand-card { border: 2px solid #f59e0b; cursor: pointer; }
         .card-slot.hand-card:hover { border-color: #fff; transform: translateY(-8px); box-shadow: 0 10px 25px rgba(245,158,11,0.4); z-index: 20; }
-        
+
         .card-stats { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.95)); padding: 4px 6px 6px; }
         .card-name { font-size: 10px; font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-position { position: absolute; top: 4px; right: 4px; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         .pos-atk { background: #ef4444; color: white; }
         .pos-def { background: #3b82f6; color: white; }
-        
+
         .hp-bar { height: 18px; border-radius: 9px; transition: width 0.6s ease; }
         .hp-bar-bg { background: #1f2937; border-radius: 9px; overflow: hidden; }
-        
+
         .btn { padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: bold; cursor: pointer; transition: all 0.2s; border: none; font-size: 14px; }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .btn-gold { background: #f59e0b; color: black; }
@@ -42,15 +42,15 @@
         .btn-green:hover:not(:disabled) { background: #4ade80; transform: translateY(-2px); }
         .btn-purple { background: #8b5cf6; color: white; }
         .btn-purple:hover:not(:disabled) { background: #a78bfa; transform: translateY(-2px); }
-        
+
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .pulse { animation: pulse 1.5s infinite; }
         @keyframes glow { 0%, 100% { box-shadow: 0 0 10px rgba(34,197,94,0.3); } 50% { box-shadow: 0 0 25px rgba(34,197,94,0.6); } }
         .glow-green { animation: glow 2s infinite; }
-        
+
         .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #f59e0b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
+
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #0b0e1e; }
         ::-webkit-scrollbar-thumb { background: #f59e0b; border-radius: 3px; }
@@ -172,28 +172,19 @@
         function renderCardSlot(card, type, index) {
             if (!card) return `<div class="card-slot empty flex items-center justify-center"><span class="text-gray-600 text-xs">Slot ${index+1}</span></div>`;
             if (card.faceDown) return `<div class="card-slot face-down flex items-center justify-center"><span class="text-4xl">🂠</span></div>`;
-            
+
             const cardName = card.name || 'Card';
             const position = card.position || 'atk';
             const posClass = position === 'atk' ? 'pos-atk' : 'pos-def';
             const posLabel = position.toUpperCase();
             const typeClass = type === 'player' ? 'player-card glow-green' : type === 'opponent' ? 'opponent-card' : 'hand-card';
-            
-            // Try direct image first, then proxy fallback
-            let imgHtml = '';
-            if (card.img) {
-                imgHtml = `<img src="${card.img}" 
-                    alt="${cardName}" 
-                    loading="lazy" 
-                    referrerpolicy="no-referrer"
-                    crossorigin="anonymous"
-                    onerror="this.src='/api/card-image?url=${encodeURIComponent(card.img)}';this.onerror=function(){this.style.display='none';this.nextElementSibling.style.display='flex';};"
-                    onload="this.nextElementSibling.style.display='none';">`;
-            }
+
+            // Use API proxy to avoid CORS issues with Shoob CDN
+            const imgSrc = card.img ? `/api/card-image?url=${encodeURIComponent(card.img)}` : '';
 
             return `<div class="card-slot ${typeClass}">
-                ${imgHtml}
-                <div class="absolute inset-0 bg-gradient-to-b from-blue-900 to-blue-950 flex flex-col items-center justify-center p-1">
+                ${imgSrc ? `<img src="${imgSrc}" alt="${cardName}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">` : ''}
+                <div class="${imgSrc ? 'hidden' : ''} absolute inset-0 bg-gradient-to-b from-blue-900 to-blue-950 flex flex-col items-center justify-center p-1">
                     <span class="text-xs font-bold text-center">${cardName.substring(0,10)}</span>
                     <span class="text-yellow-400 text-xs mt-1">⚔️${card.attack}</span>
                     <span class="text-blue-400 text-xs">🛡️${card.defense}</span>
