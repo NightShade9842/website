@@ -331,12 +331,16 @@ async function pollDuel() {
 function renderCardSlot(card, type, index) {
     if (!card) return `<div class="card-slot empty flex items-center justify-center"><span class="text-gray-600 text-xs">Slot ${index+1}</span></div>`;
     if (card.faceDown) return `<div class="card-slot face-down flex items-center justify-center"><span class="text-4xl">🂠</span></div>`;
-    const imgSrc = card.img ? `/api/card-image?url=${encodeURIComponent(card.img)}` : '';
+
     const cardName = card.name || 'Card';
     const position = card.position || 'atk';
     const posClass = position === 'atk' ? 'pos-atk' : 'pos-def';
     const posLabel = position.toUpperCase();
     const typeClass = type === 'player' ? 'player-card glow-green' : type === 'opponent' ? 'opponent-card' : 'hand-card';
+
+    // Use API proxy for card images
+    const imgSrc = card.img ? `/api/card-image?url=${encodeURIComponent(card.img)}` : '';
+
     return `<div class="card-slot ${typeClass}">
         ${imgSrc ? `<img src="${imgSrc}" alt="${cardName}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">` : ''}
         <div class="${imgSrc ? 'hidden' : ''} absolute inset-0 bg-gradient-to-b from-blue-900 to-blue-950 flex flex-col items-center justify-center p-1">
