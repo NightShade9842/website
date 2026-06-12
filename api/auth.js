@@ -74,7 +74,7 @@ module.exports = async (req, res) => {
         const userId = getUserIdFromToken(req);
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-        // Profile
+        // ── PROFILE ──
         if (path.startsWith('/profile/') && req.method === 'GET') {
             const id = path.split('/profile/')[1];
             const [[player]] = await db.execute('SELECT * FROM players WHERE user_id = ?', [id]);
@@ -84,14 +84,14 @@ module.exports = async (req, res) => {
             return res.json({ ...player, cardCount: cards, pokemonCount: pokemon });
         }
 
-        // Cards collection
+        // ── CARDS ──
         if (path.startsWith('/cards/') && req.method === 'GET') {
             const owner = path.split('/cards/')[1];
             const [cards] = await db.execute('SELECT * FROM cards WHERE owner_id = ? ORDER BY rarity_order DESC LIMIT 100', [owner]);
             return res.json(cards);
         }
 
-        // Card shop
+        // ── CARD SHOP ──
         if (path === '/shop/cards' && req.method === 'GET') {
             const [listings] = await db.execute(`
                 SELECT cl.id, c.card_name, c.rarity, c.attack, c.defense, c.image_url,
@@ -122,7 +122,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // Auctions
+        // ── AUCTIONS ──
         if (path === '/auctions' && req.method === 'GET') {
             const [auctions] = await db.execute(`
                 SELECT a.*, c.card_name, c.rarity, c.image_url
@@ -158,7 +158,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // Event store
+        // ── EVENT STORE ──
         if (path === '/events/cards' && req.method === 'GET') {
             const [items] = await db.execute("SELECT * FROM store_items WHERE price_coins > 0 AND (stock > 0 OR stock = -1)");
             return res.json(items);
@@ -184,7 +184,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // Item Store
+        // ── ITEM STORE ──
         if (path === '/store/items' && req.method === 'GET') {
             const [items] = await db.execute("SELECT * FROM store_items WHERE (price_gems > 0 OR price_beli > 0) AND (stock > 0 OR stock = -1)");
             return res.json(items);
@@ -213,7 +213,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // PokéMart
+        // ── POKéMART ──
         if (path === '/store/pokemart' && req.method === 'GET') {
             const [items] = await db.execute('SELECT * FROM pokemon_shop ORDER BY id');
             return res.json(items);
@@ -235,7 +235,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // Guild Store
+        // ── GUILD STORE ──
         if (path === '/store/guild' && req.method === 'GET') {
             const [items] = await db.execute('SELECT * FROM guild_store_items ORDER BY id');
             return res.json(items);
@@ -258,7 +258,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // Hatchery
+        // ── HATCHERY ──
         if (path === '/store/hatchery' && req.method === 'GET') {
             const [items] = await db.execute('SELECT * FROM hatchery_items ORDER BY id');
             return res.json(items);
@@ -516,7 +516,7 @@ module.exports = async (req, res) => {
             return res.json(players);
         }
 
-        // Leaderboard
+        // ── LEADERBOARD ──
         if (path.startsWith('/leaderboard/') && req.method === 'GET') {
             const type = path.split('/leaderboard/')[1];
             let query;
