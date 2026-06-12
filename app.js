@@ -25,13 +25,15 @@ const API_BASE = '/api';
         return;
     }
 
-    // Load page content
+    // Load page-specific content
     if (document.getElementById('user-stats')) loadProfile();
     if (document.getElementById('card-grid')) loadCards();
     if (document.getElementById('tab-content')) loadTabContent();
     if (document.getElementById('lb-content')) loadLeaderboard();
+    if (document.getElementById('duel-content')) loadDuelPage();
 })();
 
+// ===== AUTH =====
 async function loginWithToken(token) {
     try {
         const res = await fetch(API_BASE + '/login?token=' + encodeURIComponent(token));
@@ -269,3 +271,173 @@ async function loadLeaderboard() {
     if (!Array.isArray(data)) { container.innerHTML = '<p class="text-red-400">Failed</p>'; return; }
     container.innerHTML = `<table class="w-full text-left"><thead><tr class="text-gray-400 border-b border-gray-700"><th>#</th><th>Pirate</th><th>Stats</th></tr></thead><tbody>${data.map((e,i) => `<tr class="border-b border-gray-800"><td class="py-2">${i+1}</td><td class="py-2">${e.pirate_name||e.name||'?'}</td><td class="py-2">${currentLB==='level'?`Lv.${e.level}`:currentLB==='richest'?`💰 ${(e.total||0).toLocaleString()}`:`${e.count} Cards`}</td></tr>`).join('')}</tbody></table>`;
 }
+
+// ===== DUELS =====
+let duelPollInterval = null;
+
+async function loadDuelPage() {
+    const data = await apiFetch('/duel/active');
+    if (data?.active) {
+        renderBattlefield(data.duel);
+        if (duelPollInterval) clearInterval(duelPollInterval);
+        duelPollInterval = setInterval(pollDuel, 3000);
+    } else {
+        loadLobby();
+    }
+}
+
+async function loadLobby() {
+    const container = document.getElementById('duel-content');
+    if (!container) return;
+    const [pending, players, stats] = await Promise.all([
+        apiFetch('/duel/pending'),
+        apiFetch('/duel/players'),
+        apiFetch('/duel/stats')
+    ]);
+
+    let html = '<div class="grid grid-cols-1 md:grid-cols-3 gap-6">';
+
+    html += `<div class="glass rounded-xl p-4"><h3 class="text-xl pirate mb-3">📊 Your Stats</h3>
+        <p>⚔️ Total: ${stats?.total||0}</p><p>🏆 Wins: ${stats?.wins||0}</p><p>💀 Losses: ${stats?.losses||0}</p></div>`;
+
+    html += `<div class="glass rounded-xl p-4"><h3 class="text-xl pirate mb-3">📨 Challenges</h3>`;
+    if (pending?.length) {
+        pending.forEach(d => {
+            html += `<div class="flex justify-between items-center mb-2"><p>${d.challenger_name}</p>
+                <div><button onclick="acceptDuel()" class="bg-green-500 text-black px-3 py-1 rounded text-sm mr-1">Accept</button>
+                <button onclick="declineDuel()" class="bg-red-500 text-white px-3 py-1 rounded text-sm">Decline</button></div></div>`;
+        });
+    } else { html += '<p class="text-gray-400">No pending challenges</p>'; }
+    html += '</div>';
+
+    html += `<div class="glass rounded-xl p-4"><h3 class="text-xl pirate mb-3">🏴‍☠️ Challenge</h3>`;
+    if (players?.length) {
+        players.forEach(p => {
+            html += `<div class="flex justify-between items-center mb-2"><p>${p.pirate_name} (Lv.${p.level})</p>
+                <button onclick="challengePlayer('${p.user_id}')" class="bg-yellow-500 text-black px-3 py-1 rounded text-sm">⚔️ Duel</button></div>`;
+        });
+    } else { html += '<p class="text-gray-400">No players available</p>'; }
+    html += '</div></div>';
+
+    container.innerHTML = html;
+}
+
+async function challengePlayer(opponentId) {
+    const res = await apiFetch('/duel/challenge', { method: 'POST', body: JSON.stringify({ opponentId }) });
+    alert(res?.success ? 'Challenge sent!' : res?.error || 'Failed');
+    if (res?.success) loadDuelPage();
+}
+
+async function acceptDuel() {
+    const res = await apiFetch('/duel/accept', { method: 'POST' });
+    if (res?.success) loadDuelPage();
+    else alert(res?.error);
+}
+
+async function declineDuel() {
+    await apiFetch('/duel/decline', { method: 'POST' });
+    loadLobby();
+}
+
+async function pollDuel() {
+    const data = await apiFetch('/duel/active');
+    if (!data?.active) {
+        clearInterval(duelPollInterval);
+        alert('Duel ended!');
+        loadDuelPage();
+        return;
+    }
+    renderBattlefield(data.duel);
+}
+
+function renderBattlefield(duel) {
+    const container = document.getElementById('duel-content');
+    if (!container) return;
+    const hpBarWidth = (hp) => Math.max(0, (hp / 4000) * 100);
+    const hpColor = (hp) => hp < 1000 ? 'bg-red-500' : 'bg-green-500';
+
+    let html = `
+    <div class="text-center mb-4">
+        <p class="text-sm text-gray-400">Turn ${duel.turnCount} | Phase: ${duel.phase}</p>
+        ${duel.isMyTurn ? '<p class="text-green-400 font-bold pulse">▶ YOUR TURN</p>' : '<p class="text-yellow-400">⏳ Waiting...</p>'}
+        <p class="text-xs text-gray-500">Deck: ${duel.playerDeckCount} | Grave: ${duel.playerGrave}</p>
+    </div>
+
+    <div class="mb-4">
+        <div class="flex justify-between mb-1"><p class="font-bold">👤 ${duel.opponent}</p><p>❤️ ${duel.opponentHP}</p></div>
+        <div class="h-5 bg-gray-700 rounded-full mb-2"><div class="h-5 rounded-full ${hpColor(duel.opponentHP)}" style="width:${hpBarWidth(duel.opponentHP)}%"></div></div>
+        <div class="flex gap-2 justify-center">`;
+    for (let i = 0; i < 5; i++) {
+        const c = duel.opponentField?.[i];
+        html += `<div class="w-20 h-28 border-2 rounded-lg flex items-center justify-center text-xs ${c ? 'border-yellow-500 bg-blue-900' : 'border-gray-700'}">${c ? (c.faceDown ? '🂠' : c.name?.substring(0,8)) : ''}</div>`;
+    }
+    html += `</div></div>
+
+    <div class="text-center py-3 border-y border-gray-700 my-4"><p class="text-yellow-400">⚔️ BATTLEFIELD ⚔️</p>${duel.lastAction ? `<p class="text-xs text-gray-400 mt-1">${duel.lastAction}</p>` : ''}</div>
+
+    <div class="mb-4">
+        <div class="flex gap-2 justify-center mb-2">`;
+    for (let i = 0; i < 5; i++) {
+        const c = duel.playerField?.[i];
+        html += `<div class="w-20 h-28 border-2 rounded-lg flex items-center justify-center text-xs ${c ? 'border-yellow-500 bg-blue-900' : 'border-gray-700'}">${c ? (c.faceDown ? '🂠' : c.name?.substring(0,8)) : ''}</div>`;
+    }
+    html += `</div>
+        <div class="flex justify-between mb-1"><p class="font-bold">👤 You</p><p>❤️ ${duel.playerHP}</p></div>
+        <div class="h-5 bg-gray-700 rounded-full"><div class="h-5 rounded-full ${hpColor(duel.playerHP)}" style="width:${hpBarWidth(duel.playerHP)}%"></div></div>
+    </div>
+
+    <div class="mb-4"><p class="text-sm text-gray-400 mb-1">🃏 Hand (${duel.playerHand?.length||0})</p><div class="flex gap-2 flex-wrap">`;
+    if (duel.playerHand) {
+        duel.playerHand.forEach(c => {
+            html += `<div class="w-20 h-28 border-2 border-yellow-500 bg-blue-900 rounded-lg flex flex-col items-center justify-center text-xs p-1"><span class="truncate">${c.name?.substring(0,8)}</span><span>ATK:${c.attack}</span></div>`;
+        });
+    }
+    html += `</div></div>`;
+
+    if (duel.isMyTurn) {
+        html += `<div class="flex gap-2 justify-center flex-wrap">`;
+        if (duel.phase === 'draw') html += `<button onclick="duelAction('draw')" class="bg-blue-500 text-white px-4 py-2 rounded font-bold">📥 Draw</button>`;
+        html += `<button onclick="duelAction('summon')" class="bg-yellow-500 text-black px-4 py-2 rounded font-bold">⚔️ Summon</button>
+            <button onclick="duelAction('attack')" class="bg-red-500 text-white px-4 py-2 rounded font-bold">💥 Attack</button>
+            <button onclick="duelAction('set')" class="bg-blue-500 text-white px-4 py-2 rounded font-bold">🛡️ Set</button>
+            <button onclick="duelAction('endturn')" class="bg-green-500 text-black px-4 py-2 rounded font-bold">🏁 End Turn</button>
+        </div>`;
+    }
+    html += `<div class="text-center mt-4"><button onclick="duelAction('surrender')" class="bg-red-700 text-white px-3 py-1 rounded text-sm">🏳️ Surrender</button></div>`;
+
+    container.innerHTML = html;
+}
+
+async function duelAction(action) {
+    let body = {};
+    if (action === 'summon') {
+        const slot = prompt('Hand slot (1-7):');
+        if (!slot) return;
+        const pos = prompt('Position (atk/def):', 'atk');
+        body = { handSlot: parseInt(slot) - 1, position: pos || 'atk' };
+    } else if (action === 'attack') {
+        const slot = prompt('Your field slot (1-5):');
+        if (!slot) return;
+        const target = prompt('Target slot (1-5, blank for direct):');
+        body = { fieldSlot: parseInt(slot) - 1, targetSlot: target ? parseInt(target) - 1 : undefined };
+    } else if (action === 'set') {
+        const slot = prompt('Hand slot (1-7):');
+        if (!slot) return;
+        body = { handSlot: parseInt(slot) - 1 };
+    }
+
+    const endpoints = {
+        draw: '/duel/draw', summon: '/duel/summon', attack: '/duel/attack',
+        set: '/duel/set', endturn: '/duel/endturn', surrender: '/duel/surrender'
+    };
+    const res = await apiFetch(endpoints[action], { method: 'POST', body: JSON.stringify(body) });
+    
+    if (res?.success) {
+        if (res.result?.gameOver) { alert('🏆 You won!'); }
+        await pollDuel();
+    } else {
+        alert(res?.error || 'Action failed');
+    }
+}
+
+window.addEventListener('beforeunload', () => { if (duelPollInterval) clearInterval(duelPollInterval); });
