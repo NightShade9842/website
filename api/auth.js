@@ -52,19 +52,30 @@ module.exports = async (req, res) => {
                 const axios = require('axios');
                 const imgRes = await axios.get(imageUrl, {
                     responseType: 'arraybuffer',
-                    timeout: 10000,
+                    timeout: 15000,
+                    maxRedirects: 5,
                     headers: {
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                        'Referer': 'https://mazoku.cc/'
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                        'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                        'Accept-Language': 'en-US,en;q=0.9',
+                        'Referer': 'https://shoob.gg/',
+                        'Origin': 'https://shoob.gg',
+                        'Cache-Control': 'no-cache'
                     }
                 });
-                res.setHeader('Content-Type', imgRes.headers['content-type'] || 'image/jpeg');
+
+                const contentType = imgRes.headers['content-type'] || 'image/png';
+                res.setHeader('Content-Type', contentType);
                 res.setHeader('Cache-Control', 'public, max-age=86400');
+                res.setHeader('Access-Control-Allow-Origin', '*');
                 return res.send(Buffer.from(imgRes.data));
             } catch (e) {
-                const svg = `<svg width="100" height="140" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="140" fill="#1a3a5c" rx="8"/><text x="50" y="75" text-anchor="middle" fill="#f4a261" font-size="12">Card</text></svg>`;
-                res.setHeader('Content-Type', 'image/svg+xml');
-                return res.send(svg);
+                console.error('Image proxy error:', e.message);
+                // Return a 1x1 transparent PNG as fallback
+                const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
+                res.setHeader('Content-Type', 'image/png');
+                res.setHeader('Cache-Control', 'no-cache');
+                return res.send(pixel);
             }
         }
 
