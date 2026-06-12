@@ -43,6 +43,31 @@ module.exports = async (req, res) => {
     const db = getPool();
 
     try {
+        // ── Card Image Proxy (bypasses CORS) ──
+        if (path === '/card-image' && req.method === 'GET') {
+            const imageUrl = url.searchParams.get('url');
+            if (!imageUrl) return res.status(400).json({ error: 'Missing url' });
+
+            try {
+                const axios = require('axios');
+                const imgRes = await axios.get(imageUrl, {
+                    responseType: 'arraybuffer',
+                    timeout: 10000,
+                    headers: {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'Referer': 'https://mazoku.cc/'
+                    }
+                });
+                res.setHeader('Content-Type', imgRes.headers['content-type'] || 'image/jpeg');
+                res.setHeader('Cache-Control', 'public, max-age=86400');
+                return res.send(Buffer.from(imgRes.data));
+            } catch (e) {
+                const svg = `<svg width="100" height="140" xmlns="http://www.w3.org/2000/svg"><rect width="100" height="140" fill="#1a3a5c" rx="8"/><text x="50" y="75" text-anchor="middle" fill="#f4a261" font-size="12">Card</text></svg>`;
+                res.setHeader('Content-Type', 'image/svg+xml');
+                return res.send(svg);
+            }
+        }
+
         // ── One‑click login ──
         if (path === '/login' && req.method === 'GET') {
             const token = url.searchParams.get('token');
@@ -74,7 +99,7 @@ module.exports = async (req, res) => {
         const userId = getUserIdFromToken(req);
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-        // ── PROFILE ──
+        // Profile
         if (path.startsWith('/profile/') && req.method === 'GET') {
             const id = path.split('/profile/')[1];
             const [[player]] = await db.execute('SELECT * FROM players WHERE user_id = ?', [id]);
@@ -84,14 +109,14 @@ module.exports = async (req, res) => {
             return res.json({ ...player, cardCount: cards, pokemonCount: pokemon });
         }
 
-        // ── CARDS ──
+        // Cards collection
         if (path.startsWith('/cards/') && req.method === 'GET') {
             const owner = path.split('/cards/')[1];
             const [cards] = await db.execute('SELECT * FROM cards WHERE owner_id = ? ORDER BY rarity_order DESC LIMIT 100', [owner]);
             return res.json(cards);
         }
 
-        // ── CARD SHOP ──
+        // Card shop
         if (path === '/shop/cards' && req.method === 'GET') {
             const [listings] = await db.execute(`
                 SELECT cl.id, c.card_name, c.rarity, c.attack, c.defense, c.image_url,
@@ -122,7 +147,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // ── AUCTIONS ──
+        // Auctions
         if (path === '/auctions' && req.method === 'GET') {
             const [auctions] = await db.execute(`
                 SELECT a.*, c.card_name, c.rarity, c.image_url
@@ -158,7 +183,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // ── EVENT STORE ──
+        // Event store
         if (path === '/events/cards' && req.method === 'GET') {
             const [items] = await db.execute("SELECT * FROM store_items WHERE price_coins > 0 AND (stock > 0 OR stock = -1)");
             return res.json(items);
@@ -184,7 +209,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // ── ITEM STORE ──
+        // Item Store
         if (path === '/store/items' && req.method === 'GET') {
             const [items] = await db.execute("SELECT * FROM store_items WHERE (price_gems > 0 OR price_beli > 0) AND (stock > 0 OR stock = -1)");
             return res.json(items);
@@ -213,7 +238,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // ── POKéMART ──
+        // PokéMart
         if (path === '/store/pokemart' && req.method === 'GET') {
             const [items] = await db.execute('SELECT * FROM pokemon_shop ORDER BY id');
             return res.json(items);
@@ -235,7 +260,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // ── GUILD STORE ──
+        // Guild Store
         if (path === '/store/guild' && req.method === 'GET') {
             const [items] = await db.execute('SELECT * FROM guild_store_items ORDER BY id');
             return res.json(items);
@@ -258,7 +283,7 @@ module.exports = async (req, res) => {
             finally { conn.release(); }
         }
 
-        // ── HATCHERY ──
+        // Hatchery
         if (path === '/store/hatchery' && req.method === 'GET') {
             const [items] = await db.execute('SELECT * FROM hatchery_items ORDER BY id');
             return res.json(items);
@@ -287,7 +312,6 @@ module.exports = async (req, res) => {
 
         // ── CARD DUELS ──
 
-        // Get active duel
         if (path === '/duel/active' && req.method === 'GET') {
             const [duels] = await db.execute(
                 `SELECT * FROM card_duels WHERE (player1_id = ? OR player2_id = ?) AND status = 'active' LIMIT 1`,
@@ -321,7 +345,6 @@ module.exports = async (req, res) => {
             });
         }
 
-        // Get pending duels
         if (path === '/duel/pending' && req.method === 'GET') {
             const [duels] = await db.execute(
                 `SELECT d.*, p.pirate_name as challenger_name 
@@ -332,7 +355,6 @@ module.exports = async (req, res) => {
             return res.json(duels);
         }
 
-        // Challenge player
         if (path === '/duel/challenge' && req.method === 'POST') {
             const { opponentId } = req.body || {};
             if (!opponentId) return res.status(400).json({ error: 'Missing opponent' });
@@ -356,7 +378,6 @@ module.exports = async (req, res) => {
             return res.json({ success: true });
         }
 
-        // Accept duel
         if (path === '/duel/accept' && req.method === 'POST') {
             const [[duel]] = await db.execute(`SELECT * FROM card_duels WHERE player2_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1`, [userId]);
             if (!duel) return res.status(400).json({ error: 'No pending duel' });
@@ -364,7 +385,6 @@ module.exports = async (req, res) => {
             return res.json({ success: true });
         }
 
-        // Decline duel
         if (path === '/duel/decline' && req.method === 'POST') {
             const [[duel]] = await db.execute(`SELECT * FROM card_duels WHERE player2_id = ? AND status = 'pending' ORDER BY created_at DESC LIMIT 1`, [userId]);
             if (!duel) return res.status(400).json({ error: 'No pending duel' });
@@ -372,7 +392,6 @@ module.exports = async (req, res) => {
             return res.json({ success: true });
         }
 
-        // Draw card
         if (path === '/duel/draw' && req.method === 'POST') {
             const [[duel]] = await db.execute(`SELECT * FROM card_duels WHERE (player1_id = ? OR player2_id = ?) AND status = 'active' AND current_turn = ?`, [userId, userId, userId]);
             if (!duel) return res.status(400).json({ error: 'Not your turn' });
@@ -387,7 +406,6 @@ module.exports = async (req, res) => {
             return res.json({ success: true, card });
         }
 
-        // Summon
         if (path === '/duel/summon' && req.method === 'POST') {
             const { handSlot, position } = req.body || {};
             const [[duel]] = await db.execute(`SELECT * FROM card_duels WHERE (player1_id = ? OR player2_id = ?) AND status = 'active' AND current_turn = ?`, [userId, userId, userId]);
@@ -406,7 +424,6 @@ module.exports = async (req, res) => {
             return res.json({ success: true });
         }
 
-        // Attack
         if (path === '/duel/attack' && req.method === 'POST') {
             const { fieldSlot, targetSlot } = req.body || {};
             const [[duel]] = await db.execute(`SELECT * FROM card_duels WHERE (player1_id = ? OR player2_id = ?) AND status = 'active' AND current_turn = ?`, [userId, userId, userId]);
@@ -462,7 +479,6 @@ module.exports = async (req, res) => {
             return res.json({ success: true, result });
         }
 
-        // Set face-down
         if (path === '/duel/set' && req.method === 'POST') {
             const { handSlot } = req.body || {};
             const [[duel]] = await db.execute(`SELECT * FROM card_duels WHERE (player1_id = ? OR player2_id = ?) AND status = 'active' AND current_turn = ?`, [userId, userId, userId]);
@@ -478,7 +494,6 @@ module.exports = async (req, res) => {
             return res.json({ success: true });
         }
 
-        // End turn
         if (path === '/duel/endturn' && req.method === 'POST') {
             const [[duel]] = await db.execute(`SELECT * FROM card_duels WHERE (player1_id = ? OR player2_id = ?) AND status = 'active' AND current_turn = ?`, [userId, userId, userId]);
             if (!duel) return res.status(400).json({ error: 'Not your turn' });
@@ -488,7 +503,6 @@ module.exports = async (req, res) => {
             return res.json({ success: true });
         }
 
-        // Surrender
         if (path === '/duel/surrender' && req.method === 'POST') {
             const [[duel]] = await db.execute(`SELECT * FROM card_duels WHERE (player1_id = ? OR player2_id = ?) AND status = 'active'`, [userId, userId]);
             if (!duel) return res.status(400).json({ error: 'No active duel' });
@@ -498,7 +512,6 @@ module.exports = async (req, res) => {
             return res.json({ success: true });
         }
 
-        // Duel stats
         if (path === '/duel/stats' && req.method === 'GET') {
             const [[stats]] = await db.execute(
                 `SELECT COUNT(*) as total, SUM(CASE WHEN winner_id = ? THEN 1 ELSE 0 END) as wins FROM card_duels WHERE (player1_id = ? OR player2_id = ?) AND status = 'finished'`,
@@ -507,7 +520,6 @@ module.exports = async (req, res) => {
             return res.json({ total: stats.total || 0, wins: stats.wins || 0, losses: (stats.total || 0) - (stats.wins || 0) });
         }
 
-        // Online players for challenging
         if (path === '/duel/players' && req.method === 'GET') {
             const [players] = await db.execute(
                 `SELECT user_id, pirate_name, level FROM players WHERE user_id != ? AND user_id IN (SELECT DISTINCT owner_id FROM cards WHERE deck_number = 1) LIMIT 20`,
@@ -516,7 +528,7 @@ module.exports = async (req, res) => {
             return res.json(players);
         }
 
-        // ── LEADERBOARD ──
+        // Leaderboard
         if (path.startsWith('/leaderboard/') && req.method === 'GET') {
             const type = path.split('/leaderboard/')[1];
             let query;
