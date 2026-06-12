@@ -11,7 +11,6 @@
         body { background: #0b0e1e; color: #e2e8f0; }
         .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
         .gold-text { background: linear-gradient(135deg, #fbbf24, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-
         .card-slot { width: 100px; height: 140px; border-radius: 10px; position: relative; overflow: hidden; transition: all 0.3s; }
         .card-slot img { width: 100%; height: 100%; object-fit: cover; }
         .card-slot.player-card { border: 3px solid #22c55e; box-shadow: 0 0 15px rgba(34,197,94,0.3); }
@@ -20,61 +19,42 @@
         .card-slot.empty { border: 2px dashed #334155; background: rgba(0,0,0,0.2); }
         .card-slot.hand-card { border: 2px solid #f59e0b; cursor: pointer; }
         .card-slot.hand-card:hover { border-color: #fff; transform: translateY(-8px); box-shadow: 0 10px 25px rgba(245,158,11,0.4); z-index: 20; }
-
         .card-stats { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.95)); padding: 4px 6px 6px; }
         .card-name { font-size: 10px; font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .card-position { position: absolute; top: 4px; right: 4px; font-size: 9px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
         .pos-atk { background: #ef4444; color: white; }
         .pos-def { background: #3b82f6; color: white; }
-
         .hp-bar { height: 18px; border-radius: 9px; transition: width 0.6s ease; }
         .hp-bar-bg { background: #1f2937; border-radius: 9px; overflow: hidden; }
-
         .btn { padding: 0.6rem 1.2rem; border-radius: 0.5rem; font-weight: bold; cursor: pointer; transition: all 0.2s; border: none; font-size: 14px; }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .btn-gold { background: #f59e0b; color: black; }
-        .btn-gold:hover:not(:disabled) { background: #fbbf24; transform: translateY(-2px); }
-        .btn-blue { background: #3b82f6; color: white; }
-        .btn-blue:hover:not(:disabled) { background: #60a5fa; transform: translateY(-2px); }
-        .btn-red { background: #ef4444; color: white; }
-        .btn-red:hover:not(:disabled) { background: #f87171; transform: translateY(-2px); }
-        .btn-green { background: #22c55e; color: black; }
-        .btn-green:hover:not(:disabled) { background: #4ade80; transform: translateY(-2px); }
-        .btn-purple { background: #8b5cf6; color: white; }
-        .btn-purple:hover:not(:disabled) { background: #a78bfa; transform: translateY(-2px); }
-
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-        .pulse { animation: pulse 1.5s infinite; }
-        @keyframes glow { 0%, 100% { box-shadow: 0 0 10px rgba(34,197,94,0.3); } 50% { box-shadow: 0 0 25px rgba(34,197,94,0.6); } }
-        .glow-green { animation: glow 2s infinite; }
-
+        .btn-gold { background: #f59e0b; color: black; } .btn-gold:hover:not(:disabled) { background: #fbbf24; transform: translateY(-2px); }
+        .btn-blue { background: #3b82f6; color: white; } .btn-blue:hover:not(:disabled) { background: #60a5fa; transform: translateY(-2px); }
+        .btn-red { background: #ef4444; color: white; } .btn-red:hover:not(:disabled) { background: #f87171; transform: translateY(-2px); }
+        .btn-green { background: #22c55e; color: black; } .btn-green:hover:not(:disabled) { background: #4ade80; transform: translateY(-2px); }
+        .btn-purple { background: #8b5cf6; color: white; } .btn-purple:hover:not(:disabled) { background: #a78bfa; transform: translateY(-2px); }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } } .pulse { animation: pulse 1.5s infinite; }
+        @keyframes glow { 0%, 100% { box-shadow: 0 0 10px rgba(34,197,94,0.3); } 50% { box-shadow: 0 0 25px rgba(34,197,94,0.6); } } .glow-green { animation: glow 2s infinite; }
         .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #f59e0b; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #0b0e1e; }
-        ::-webkit-scrollbar-thumb { background: #f59e0b; border-radius: 3px; }
     </style>
 </head>
 <body class="min-h-screen p-4 md:p-6">
     <nav class="glass rounded-2xl p-4 mb-6 flex justify-between items-center flex-wrap gap-2">
         <h1 class="text-2xl md:text-3xl pirate gold-text">⚓ SABAODY</h1>
         <div class="space-x-1 md:space-x-3 text-sm md:text-base">
-            <a href="profile.html" class="text-gray-300 hover:text-yellow-400 transition">Profile</a>
-            <a href="cards.html" class="text-gray-300 hover:text-yellow-400 transition">Cards</a>
-            <a href="store.html" class="text-gray-300 hover:text-yellow-400 transition">Store</a>
+            <a href="profile.html" class="text-gray-300 hover:text-yellow-400">Profile</a>
+            <a href="cards.html" class="text-gray-300 hover:text-yellow-400">Cards</a>
+            <a href="store.html" class="text-gray-300 hover:text-yellow-400">Store</a>
             <a href="duels.html" class="text-yellow-400 font-semibold">Duels</a>
-            <a href="leaderboard.html" class="text-gray-300 hover:text-yellow-400 transition">Leaderboard</a>
-            <button onclick="logout()" class="bg-red-500 px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-white hover:bg-red-600 transition text-sm">Logout</button>
+            <a href="leaderboard.html" class="text-gray-300 hover:text-yellow-400">Leaderboard</a>
+            <button onclick="logout()" class="bg-red-500 px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-white hover:bg-red-600 text-sm">Logout</button>
         </div>
     </nav>
 
     <div id="duel-content" class="glass rounded-2xl p-4 md:p-6 min-h-[500px]">
         <div class="flex items-center justify-center h-64">
-            <div class="text-center">
-                <div class="spinner mb-4"></div>
-                <p class="text-gray-400">Loading duel arena...</p>
-            </div>
+            <div class="text-center"><div class="spinner mb-4"></div><p class="text-gray-400">Loading duel arena...</p></div>
         </div>
     </div>
 
@@ -87,10 +67,7 @@
             if (!localStorage.getItem('sabaody_token')) window.location = 'index.html';
             loadDuelPage();
         });
-
-        window.addEventListener('beforeunload', () => {
-            if (duelPollInterval) clearInterval(duelPollInterval);
-        });
+        window.addEventListener('beforeunload', () => { if (duelPollInterval) clearInterval(duelPollInterval); });
 
         async function loadDuelPage() {
             const data = await apiFetch('/duel/active');
@@ -109,48 +86,20 @@
         async function loadLobby() {
             const container = document.getElementById('duel-content');
             const [pending, players, stats] = await Promise.all([
-                apiFetch('/duel/pending'),
-                apiFetch('/duel/players'),
-                apiFetch('/duel/stats')
+                apiFetch('/duel/pending'), apiFetch('/duel/players'), apiFetch('/duel/stats')
             ]);
-
             let html = '<div class="grid grid-cols-1 md:grid-cols-3 gap-6">';
-
-            html += `<div class="glass rounded-xl p-5">
-                <h3 class="text-2xl pirate mb-4">📊 Your Stats</h3>
-                <div class="space-y-3 text-sm">
-                    <div class="flex justify-between"><span>⚔️ Total</span><span class="font-bold">${stats?.total||0}</span></div>
-                    <div class="flex justify-between"><span>🏆 Wins</span><span class="text-green-400 font-bold">${stats?.wins||0}</span></div>
-                    <div class="flex justify-between"><span>💀 Losses</span><span class="text-red-400 font-bold">${stats?.losses||0}</span></div>
-                    <div class="flex justify-between"><span>📈 Win Rate</span><span class="font-bold">${stats?.total?Math.round((stats.wins/stats.total)*100):0}%</span></div>
-                </div>
-            </div>`;
-
+            html += `<div class="glass rounded-xl p-5"><h3 class="text-2xl pirate mb-4">📊 Your Stats</h3>...</div>`;
             html += `<div class="glass rounded-xl p-5"><h3 class="text-2xl pirate mb-4">📨 Challenges</h3>`;
             if (pending?.length) {
-                pending.forEach(d => {
-                    html += `<div class="flex justify-between items-center bg-gray-800 rounded-lg p-3 mb-2">
-                        <div><p class="font-bold">${d.challenger_name}</p></div>
-                        <div class="space-x-1">
-                            <button onclick="acceptDuel()" class="bg-green-500 text-black px-3 py-1 rounded text-sm font-bold hover:bg-green-400">✓</button>
-                            <button onclick="declineDuel()" class="bg-red-500 text-white px-3 py-1 rounded text-sm font-bold hover:bg-red-400">✗</button>
-                        </div>
-                    </div>`;
-                });
+                pending.forEach(d => { html += `<div class="flex justify-between items-center bg-gray-800 rounded-lg p-3 mb-2"><div><p class="font-bold">${d.challenger_name}</p></div><div class="space-x-1"><button onclick="acceptDuel()" class="bg-green-500 text-black px-3 py-1 rounded text-sm">✓</button><button onclick="declineDuel()" class="bg-red-500 text-white px-3 py-1 rounded text-sm">✗</button></div></div>`; });
             } else { html += '<p class="text-gray-400 text-center py-4">No challenges</p>'; }
             html += '</div>';
-
             html += `<div class="glass rounded-xl p-5"><h3 class="text-2xl pirate mb-4">🏴‍☠️ Challenge</h3><div class="space-y-2 max-h-64 overflow-y-auto">`;
             if (players?.length) {
-                players.forEach(p => {
-                    html += `<div class="flex justify-between items-center bg-gray-800 rounded-lg p-3">
-                        <div><p class="font-bold">${p.pirate_name}</p><p class="text-xs text-gray-400">Lv.${p.level}</p></div>
-                        <button onclick="challengePlayer('${p.user_id}')" class="bg-yellow-500 text-black px-4 py-1 rounded text-sm font-bold hover:bg-yellow-400">⚔️ Duel</button>
-                    </div>`;
-                });
+                players.forEach(p => { html += `<div class="flex justify-between items-center bg-gray-800 rounded-lg p-3"><div><p class="font-bold">${p.pirate_name}</p><p class="text-xs text-gray-400">Lv.${p.level}</p></div><button onclick="challengePlayer('${p.user_id}')" class="bg-yellow-500 text-black px-4 py-1 rounded text-sm">⚔️ Duel</button></div>`; });
             } else { html += '<p class="text-gray-400 text-center py-4">No players</p>'; }
             html += '</div></div></div>';
-
             container.innerHTML = html;
         }
 
@@ -172,16 +121,13 @@
         function renderCardSlot(card, type, index) {
             if (!card) return `<div class="card-slot empty flex items-center justify-center"><span class="text-gray-600 text-xs">Slot ${index+1}</span></div>`;
             if (card.faceDown) return `<div class="card-slot face-down flex items-center justify-center"><span class="text-4xl">🂠</span></div>`;
-
             const cardName = card.name || 'Card';
             const position = card.position || 'atk';
             const posClass = position === 'atk' ? 'pos-atk' : 'pos-def';
             const posLabel = position.toUpperCase();
             const typeClass = type === 'player' ? 'player-card glow-green' : type === 'opponent' ? 'opponent-card' : 'hand-card';
-
-            // Use API proxy to avoid CORS issues with Shoob CDN
-            const imgSrc = card.img ? `/api/card-image?url=${encodeURIComponent(card.img)}` : '';
-
+            // ── DIRECT IMAGE (same as cards page) ──
+            const imgSrc = card.img || '';
             return `<div class="card-slot ${typeClass}">
                 ${imgSrc ? `<img src="${imgSrc}" alt="${cardName}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">` : ''}
                 <div class="${imgSrc ? 'hidden' : ''} absolute inset-0 bg-gradient-to-b from-blue-900 to-blue-950 flex flex-col items-center justify-center p-1">
@@ -217,7 +163,7 @@
                 if (duel.phase === 'draw') html += `<button onclick="duelAction('draw')" class="btn btn-blue">📥 Draw</button>`;
                 html += `<button onclick="duelAction('summon')" class="btn btn-gold">⚔️ Summon</button><button onclick="duelAction('attack')" class="btn btn-red">💥 Attack</button><button onclick="duelAction('set')" class="btn btn-purple">🛡️ Set</button><button onclick="duelAction('endturn')" class="btn btn-green">🏁 End Turn</button></div>`;
             }
-            html += `<div class="text-center mt-6"><button onclick="duelAction('surrender')" class="bg-gray-700 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition">🏳️ Surrender</button></div>`;
+            html += `<div class="text-center mt-6"><button onclick="duelAction('surrender')" class="bg-gray-700 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm">🏳️ Surrender</button></div>`;
             container.innerHTML = html;
         }
 
