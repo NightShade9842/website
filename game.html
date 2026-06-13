@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚓ SABAODY RPG</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        canvas { display: block; }
+        #ui {
+            position: absolute; top: 10px; left: 10px;
+            color: white; font-family: 'Arial', sans-serif;
+            z-index: 10; pointer-events: none;
+        }
+        #ui p { margin: 2px 0; }
+        #crosshair {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: white; font-size: 24px; opacity: 0.5;
+            pointer-events: none; z-index: 20;
+        }
+        #inventory {
+            position: absolute; bottom: 10px; left: 10px;
+            color: white; font-family: Arial;
+            z-index: 10; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <p id="playerName">🏴‍☠️ Loading...</p>
+        <p id="playerHP">❤️ 100</p>
+        <p id="playerBeli">💰 0</p>
+    </div>
+    <div id="crosshair">+</div>
+    <div id="inventory"></div>
+
+    <!-- Three.js import map -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="game.js"></script>
+</body>
+</html>
